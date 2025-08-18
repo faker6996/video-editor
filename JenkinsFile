@@ -1,0 +1,366 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Project configuration
+        PROJECT_NAME = 'ocr-editing'
+        DEPLOY_DIR = '/opt/ocr-editing'
+        NODE_VERSION = '18'
+        
+        // Git credentials for private repo
+        GIT_CREDENTIALS = 'github-private-key' // Jenkins credential ID
+        
+        // Environment files
+        ENV_PROD = credentials('ocr-env-prod')     // Production .env.prod file
+        // ENV_DEV = credentials('ocr-env-dev')    // Development - Not needed for now
+        
+        // Notification settings (optional)
+        DISCORD_WEBHOOK = credentials('discord-webhook-url')
+    }
+    
+    parameters {
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: ['prod'],
+            description: 'Target deployment environment (Production only)'
+        )
+        choice(
+            name: 'DEPLOY_TYPE', 
+            choices: ['pm2', 'docker'],
+            description: 'Deployment method'
+        )
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,
+            description: 'Skip running tests (for hotfix deployments)'
+        )
+    }
+    
+    stages {
+        stage('🏁 Initialize') {
+            steps {
+                script {
+                    // Set build display name
+                    currentBuild.displayName = "#${BUILD_NUMBER} - ${params.DEPLOY_ENV}"
+                    currentBuild.description = "Deploy to ${params.DEPLOY_ENV} using ${params.DEPLOY_TYPE}"
+                    
+                    // Log build information
+                    echo "🚀 Starting deployment for OCR Editing System"
+                    echo "📋 Build: ${BUILD_NUMBER}"
+                    echo "🎯 Environment: ${params.DEPLOY_ENV}"
+                    echo "📦 Deploy Type: ${params.DEPLOY_TYPE}"
+                    echo "🧪 Skip Tests: ${params.SKIP_TESTS}"
+                }
+            }
+        }
+        
+        stage('📥 Checkout') {
+            steps {
+                script {
+                    // Clean workspace
+                    deleteDir()
+                    
+                    // Checkout private repository
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [
+                            [$class: 'CleanBeforeCheckout'],
+                            [$class: 'CloneOption', depth: 1, shallow: true]
+                        ],
+                        submoduleCfg: [],
+                        userRemoteConfigs: [[
+                            credentialsId: "${GIT_CREDENTIALS}",
+                            url: 'https://github.com/faker6996/ocr_editing.git'
+                        ]]
+                    ])
+                    
+                    // Get commit info
+                    env.GIT_COMMIT_HASH = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+                    
+                    env.GIT_COMMIT_MESSAGE = sh(
+                        script: 'git log -1 --pretty=%s',
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "✅ Checked out commit: ${env.GIT_COMMIT_HASH}"
+                    echo "📝 Commit message: ${env.GIT_COMMIT_MESSAGE}"
+                }
+            }
+        }
+        
+        stage('🔧 Setup Environment') {
+            steps {
+                script {
+                    // Setup Node.js version
+                    sh """
+                        echo "Setting up Node.js ${NODE_VERSION}"
+                        export NVM_DIR="/opt/nvm"
+                        [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+                        nvm use ${NODE_VERSION} || nvm install ${NODE_VERSION}
+                        node --version
+                        npm --version
+                    """
+                    
+                    // Copy production environment file
+                    sh 'cp "${ENV_PROD}" .env.local'
+                    echo "📋 Using production environment configuration (.env.prod)"
+                    
+                    // Ensure upload directory exists
+                    sh 'mkdir -p public/uploads'
+                    sh 'chmod 755 public/uploads'
+                    
+                    echo "✅ Environment setup completed"
+                }
+            }
+        }
+        
+        stage('📦 Install Dependencies') {
+            steps {
+                script {
+                    // Install npm dependencies with caching
+                    sh """
+                        echo "Installing dependencies..."
+                        
+                        # Use npm cache if available
+                        if [ -d "/opt/npm-cache" ]; then
+                            npm install --cache /opt/npm-cache --prefer-offline
+                        else
+                            npm install
+                        fi
+                        
+                        # Verify critical packages
+                        npm list sharp uuid pg ioredis || echo "Some packages missing but continuing..."
+                        
+                        echo "✅ Dependencies installed successfully"
+                    """
+                }
+            }
+        }
+        
+        stage('🧪 Run Tests') {
+            when {
+                not { params.SKIP_TESTS }
+            }
+            steps {
+                script {
+                    try {
+                        // Run linting
+                        sh 'npm run lint'
+                        echo "✅ Linting passed"
+                        
+                        // Run type checking (if available)
+                        sh """
+                            if npm run | grep -q "type-check"; then
+                                npm run type-check
+                                echo "✅ Type checking passed"
+                            else
+                                echo "⚠️ No type-check script found, skipping"
+                            fi
+                        """
+                        
+                        // Run unit tests (if available)
+                        sh """
+                            if npm run | grep -q " test "; then
+                                npm test -- --ci --coverage --watchAll=false
+                                echo "✅ Tests passed"
+                            else
+                                echo "⚠️ No test script found, skipping tests"
+                            fi
+                        """
+                        
+                    } catch (Exception e) {
+                        echo "❌ Tests failed: ${e.getMessage()}"
+                        error "Tests failed in production deployment"
+                    }
+                }
+            }
+        }
+        
+        stage('🏗️ Build Application') {
+            steps {
+                script {
+                    sh """
+                        echo "Building Next.js application..."
+                        
+                        # Set build environment
+                        export NODE_ENV=production
+                        export NEXT_TELEMETRY_DISABLED=1
+                        
+                        # Build the application
+                        npm run build
+                        
+                        # Verify build output
+                        if [ -d ".next" ]; then
+                            echo "✅ Build completed successfully"
+                            du -sh .next
+                        else
+                            echo "❌ Build failed - .next directory not found"
+                            exit 1
+                        fi
+                    """
+                }
+            }
+        }
+        
+        
+        stage('🚀 Deploy Application') {
+            steps {
+                script {
+                    if (params.DEPLOY_TYPE == 'pm2') {
+                        // PM2 deployment
+                        sh """
+                            echo "Deploying with PM2..."
+                            
+                            # Create deployment directory
+                            sudo mkdir -p ${DEPLOY_DIR}
+                            sudo chown jenkins:jenkins ${DEPLOY_DIR}
+                            
+                            # Copy files to deployment directory
+                            rsync -av --delete --exclude 'node_modules' --exclude '.git' . ${DEPLOY_DIR}/
+                            
+                            cd ${DEPLOY_DIR}
+                            
+                            # Install production dependencies
+                            npm ci --production
+                            
+                            # Stop existing PM2 process
+                            pm2 stop ${PROJECT_NAME} || true
+                            pm2 delete ${PROJECT_NAME} || true
+                            
+                            # Start with PM2
+                            pm2 start npm --name "${PROJECT_NAME}" -- start
+                            pm2 save
+                            
+                            # Verify deployment
+                            pm2 status ${PROJECT_NAME}
+                            
+                            echo "✅ PM2 deployment completed"
+                        """
+                    } else {
+                        // Docker deployment (Production only)
+                        sh """
+                            echo "Deploying with Docker (Production)..."
+                            
+                            # Stop existing container
+                            docker-compose -f docker-compose.prod.yml stop ocr-editing || true
+                            docker-compose -f docker-compose.prod.yml rm -f ocr-editing || true
+                            
+                            # Build new image
+                            docker-compose -f docker-compose.prod.yml build --no-cache ocr-editing
+                            
+                            # Start container
+                            docker-compose -f docker-compose.prod.yml up -d ocr-editing
+                            
+                            # Verify deployment
+                            sleep 10
+                            docker-compose -f docker-compose.prod.yml ps ocr-editing
+                            
+                            echo "✅ Docker deployment completed for Production"
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('✅ Health Check') {
+            steps {
+                script {
+                    sh """
+                        echo "Performing health checks..."
+                        
+                        # Wait for application to start
+                        sleep 15
+                        
+                        # Health check endpoint
+                        if curl -f -s http://192.168.210.100:3000/api/health > /dev/null; then
+                            echo "✅ Health check passed"
+                        else
+                            echo "⚠️ Health check endpoint not responding, trying main page"
+                            if curl -f -s http://192.168.210.100:3000 > /dev/null; then
+                                echo "✅ Main page accessible"
+                            else
+                                echo "❌ Application not responding"
+                                exit 1
+                            fi
+                        fi
+                        
+                        # Check upload directory
+                        if [ -d "${DEPLOY_DIR}/public/uploads" ]; then
+                            echo "✅ Upload directory exists"
+                        else
+                            echo "⚠️ Upload directory missing"
+                        fi
+                        
+                        echo "✅ Health checks completed"
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                // Clean up temporary files
+                sh 'rm -f .env.local'
+                
+                // Archive build artifacts
+                archiveArtifacts artifacts: 'package.json,package-lock.json', allowEmptyArchive: true
+                
+                echo "🧹 Cleanup completed"
+            }
+        }
+        
+        success {
+            script {
+                echo "🎉 Deployment successful!"
+                
+                // Send success notification
+                try {
+                    // Discord notification
+                    sh """
+                        curl -H "Content-Type: application/json" -X POST -d '{
+                            "content": "✅ **OCR Editing Deployment Successful**\\n**Environment:** ${params.DEPLOY_ENV}\\n**Build:** #${BUILD_NUMBER}\\n**Commit:** ${env.GIT_COMMIT_HASH}\\n**Message:** ${env.GIT_COMMIT_MESSAGE}\\n**Deploy Type:** ${params.DEPLOY_TYPE}"
+                        }' ${DISCORD_WEBHOOK}
+                    """
+                } catch (Exception e) {
+                    echo "Failed to send Discord notification: ${e.getMessage()}"
+                }
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Deployment failed!"
+                
+                // Send failure notification
+                try {
+                    sh """
+                        curl -H "Content-Type: application/json" -X POST -d '{
+                            "content": "❌ **OCR Editing Deployment Failed**\\n**Environment:** ${params.DEPLOY_ENV}\\n**Build:** #${BUILD_NUMBER}\\n**Commit:** ${env.GIT_COMMIT_HASH}\\n**Stage:** ${env.STAGE_NAME}\\n**Deploy Type:** ${params.DEPLOY_TYPE}"
+                        }' ${DISCORD_WEBHOOK}
+                    """
+                } catch (Exception e) {
+                    echo "Failed to send Discord notification: ${e.getMessage()}"
+                }
+                
+                // Collect logs for debugging
+                sh """
+                    echo "Collecting deployment logs..."
+                    if [ "${params.DEPLOY_TYPE}" = "docker" ]; then
+                        docker-compose -f docker-compose.prod.yml logs --tail=100 > deployment-logs.txt || true
+                    elif [ "${params.DEPLOY_TYPE}" = "pm2" ]; then
+                        pm2 logs ${PROJECT_NAME} --lines 100 > deployment-logs.txt || true
+                    fi
+                """
+                
+                archiveArtifacts artifacts: 'deployment-logs.txt', allowEmptyArchive: true
+            }
+        }
+    }
+}
