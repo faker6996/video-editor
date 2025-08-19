@@ -66,14 +66,20 @@ export default function LoginContainer() {
 
     loading.show(t("loggingIn"));
     try {
-      const loginResult = await callApi<any>(API_ROUTES.AUTH.LOGIN, HTTP_METHOD_ENUM.POST, {
-        email,
-        password,
-        rememberMe,
-      });
+      // Use silent flag to prevent alert() and only use toast
+      const loginResult = await callApi<any>(
+        API_ROUTES.AUTH.LOGIN,
+        HTTP_METHOD_ENUM.POST,
+        {
+          email,
+          password,
+          rememberMe,
+        },
+        { silent: true }
+      );
 
       // Fetch user data after successful login
-      const userData = await callApi<User>(API_ROUTES.AUTH.ME, HTTP_METHOD_ENUM.GET);
+      const userData = await callApi<User>(API_ROUTES.AUTH.ME, HTTP_METHOD_ENUM.GET, undefined, { silent: true });
       if (userData) {
         login(userData, null); // Token is stored in cookie, not needed in context
       }
@@ -83,9 +89,10 @@ export default function LoginContainer() {
         message: t("loginSuccess"),
       });
 
-      window.location.href = `/${locale}/dashboard`;
+      // Use router.push instead of window.location.href to avoid hard reload
+      router.push(`/${locale}/dashboard`);
     } catch (err: any) {
-      console.error(err);
+      console.error("Login error:", err);
       addToast({
         type: "error",
         message: err?.message || t("errors.loginFailed"),

@@ -12,9 +12,9 @@ export const normalLoginApp = {
       user.is_sso = false; // Đánh dấu là user không phải SSO
       user.name = userInfo.name || user.name; // Cập nhật tên nếu có
       user.last_login_at = new Date().toISOString(); // Cập nhật last login
-      
+
       const updateUser = await baseRepo.update(user);
-      updateUser!.password = "";
+      updateUser!.password_hash = ""; // Clear password for security
       return updateUser as User; // Trả về user đã cập nhật
     }
     return null;

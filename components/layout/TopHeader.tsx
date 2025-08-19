@@ -22,10 +22,10 @@ export function TopHeader({ className }: TopHeaderProps) {
       setSidebarWidth(event.detail.isExpanded ? 256 : 80);
     };
 
-    window.addEventListener('sidebarToggle', handleSidebarToggle as EventListener);
-    
+    window.addEventListener("sidebarToggle", handleSidebarToggle as EventListener);
+
     return () => {
-      window.removeEventListener('sidebarToggle', handleSidebarToggle as EventListener);
+      window.removeEventListener("sidebarToggle", handleSidebarToggle as EventListener);
     };
   }, []);
 
@@ -55,7 +55,7 @@ export function TopHeader({ className }: TopHeaderProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 handleSearch(e as any);
               }
@@ -72,3 +72,5 @@ export function TopHeader({ className }: TopHeaderProps) {
     </header>
   );
 }
+
+export default TopHeader;

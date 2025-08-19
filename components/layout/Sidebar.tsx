@@ -144,7 +144,7 @@ export function Sidebar({ className }: SidebarProps) {
     >
       {/* Header */}
       <div className="h-16 px-4 border-b border-border/60 flex items-center">
-        <div className={cn("flex items-center w-full", isExpanded ? "justify-between" : "justify-end")}> 
+        <div className={cn("flex items-center w-full", isExpanded ? "justify-between" : "justify-end")}>
           {isExpanded && (
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
@@ -154,12 +154,24 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
           )}
           {isExpanded && (
-            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-muted-foreground hover:text-foreground" aria-label="Collapse sidebar">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Collapse sidebar"
+            >
               <ChevronLeft className="w-4 h-4 transition-transform" />
             </Button>
           )}
           {!isExpanded && (
-            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-muted-foreground hover:text-foreground" aria-label="Expand sidebar">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Expand sidebar"
+            >
               <ChevronLeft className="w-4 h-4 transition-transform rotate-180" />
             </Button>
           )}
@@ -231,7 +243,7 @@ export function Sidebar({ className }: SidebarProps) {
                   <Avatar src={user.avatar_url} size="sm" className="w-8 h-8" />
                   {isExpanded && (
                     <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-medium text-foreground truncate">{user.name || user.user_name}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                   )}

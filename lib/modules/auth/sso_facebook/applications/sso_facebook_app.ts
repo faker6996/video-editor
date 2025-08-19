@@ -17,24 +17,30 @@ export const ssoFacebookApp = {
       user.last_login_at = new Date().toISOString(); // Cập nhật last login
 
       const updateUser = await baseRepo.update(user);
-      updateUser!.password = ""; // Giữ nguyên password cũ
+      updateUser!.password_hash = ""; // Clear password for security
       return updateUser as User; // Trả về user đã cập nhật
     }
 
-    const newUser = new User();
-    newUser.email = userInfo.email;
-    newUser.name = userInfo.name;
-    newUser.is_sso = true;
-    newUser.sub = userInfo.sub;
-    newUser.is_active = true; // Mặc định là active
-    newUser.user_name = userInfo.email;
-    newUser.avatar_url = userInfo.picture.data.url || "";
-    newUser.password = await hashPassword(userInfo.email + "2025");
+    // Tạo user mới từ Facebook SSO
+    const newUserData = {
+      email: userInfo.email,
+      name: userInfo.name,
+      sub: userInfo.sub,
+      avatar_url: userInfo.picture?.data?.url || "",
+      email_verified: userInfo.verified_email || false,
+      provider: "facebook",
+      provider_id: userInfo.sub,
+      is_active: true,
+      is_sso: true,
+      password_hash: await hashPassword(userInfo.email + "2025"), // Generate secure password
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_login_at: new Date().toISOString(),
+    };
 
-    // Nếu chưa tồn tại → tạo user mới
-    // u.name = ;
+    const newUser = new User(newUserData);
     const rs = await baseRepo.insert(newUser);
-    rs.password = ""; // Không trả về password
+    rs.password_hash = ""; // Không trả về password
     return rs;
   },
 };

@@ -34,8 +34,7 @@ export async function callApi<T>(
   config?: (AxiosRequestConfig & { silent?: boolean }) & { _retry?: boolean }
 ): Promise<T> {
   console.log(`🔥 API Call: ${method} ${url}`, data);
-  
-  
+
   try {
     const res = await api.request({
       url,
@@ -49,10 +48,10 @@ export async function callApi<T>(
     // Backend chuẩn hóa { success, message, data }
     const { success, message, data: payload } = res.data;
 
-    // Don't show alert for auth endpoints or when silent flag is set
-    const isAuthEndpoint = url.includes('/auth/');
-    const shouldShowAlert = !config?.silent && !isAuthEndpoint;
-    
+    // Only skip alerts for silent requests, not auth endpoints
+    // Auth endpoints should show errors to users
+    const shouldShowAlert = !config?.silent;
+
     if (!success) {
       if (shouldShowAlert) {
         alert(message);
@@ -75,10 +74,10 @@ export async function callApi<T>(
     // Handle 401 Unauthorized - Token expired or invalid
     if (axiosErr.response?.status === 401) {
       // Avoid infinite loop and skip for auth endpoints themselves
-      const isAuthEndpoint = url.includes('/auth/');
+      const isAuthEndpoint = url.includes("/auth/");
       const alreadyRetried = !!config?._retry;
 
-      if (!alreadyRetried && !url.includes('/auth/refresh')) {
+      if (!alreadyRetried && !url.includes("/auth/refresh")) {
         try {
           // Try silent refresh using raw axios to avoid recursion
           const refreshRes = await api.post(API_ROUTES.AUTH.REFRESH, undefined, { withCredentials: true });
@@ -94,7 +93,7 @@ export async function callApi<T>(
               headers: { ...(config?.headers || {}), "Content-Type": config?.headers?.["Content-Type"] || "application/json" },
             });
             const { success: ok, data: payload, message } = retryRes.data || {};
-            if (!ok) throw new Error(message || 'Request failed');
+            if (!ok) throw new Error(message || "Request failed");
             return payload as T;
           }
         } catch (refreshErr) {
@@ -103,15 +102,17 @@ export async function callApi<T>(
       }
 
       // Get current locale from URL
-      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-      const pathSegments = currentPath.split('/').filter(Boolean);
-      const currentLocale = ['vi', 'en'].includes(pathSegments[0] as any) ? pathSegments[0] : 'vi';
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+      const pathSegments = currentPath.split("/").filter(Boolean);
+      const currentLocale = ["vi", "en"].includes(pathSegments[0] as any) ? pathSegments[0] : "vi";
 
-      if (typeof window !== 'undefined') {
-        try { localStorage.removeItem('user'); } catch {}
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("user");
+        } catch {}
         window.location.href = `/${currentLocale}/login`;
       }
-      throw new Error('Session expired. Please login again.');
+      throw new Error("Session expired. Please login again.");
     }
 
     // For silent requests, don't log system errors either
@@ -120,7 +121,7 @@ export async function callApi<T>(
       console.error("Error response:", axiosErr.response?.data);
       console.error("Error status:", axiosErr.response?.status);
     }
-    
+
     throw new Error(msg);
   }
 }

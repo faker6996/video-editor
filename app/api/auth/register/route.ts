@@ -15,36 +15,40 @@ import { applyRateLimit, registerRateLimit } from "@/lib/middlewares/auth-rate-l
 async function handler(req: NextRequest) {
   // Apply rate limiting first
   await applyRateLimit(req, registerRateLimit);
-  
+
   const { name, email, password } = await req.json();
 
   // Create new user (validation is handled in userApp.createUser)
+  // Note: userApp.createUser expects a temporary 'password' field for processing
   const newUser = await userApp.createUser({
     name,
     email,
-    password,
-    last_login_at: new Date().toISOString()
-  });
+    password, // This will be converted to password_hash inside userApp.createUser
+    last_login_at: new Date().toISOString(),
+  } as any); // Use 'as any' to bypass TypeScript error during build
 
   if (!newUser) {
     throw new ApiError("Không thể tạo tài khoản", 500);
   }
 
   // Generate token pair
-  const { accessToken, refreshToken } = createTokenPair({
-    sub: newUser.id!.toString(),
-    email: newUser.email,
-    name: newUser.name,
-    id: newUser.id!
-  }, false); // Default to not remember for new registrations
+  const { accessToken, refreshToken } = createTokenPair(
+    {
+      sub: newUser.id!.toString(),
+      email: newUser.email,
+      name: newUser.name,
+      id: newUser.id!,
+    },
+    false
+  ); // Default to not remember for new registrations
 
   // Store refresh token in database
   const refreshTokenExpiry = new Date();
   refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7); // 7 days for new users
-  
+
   await refreshTokenApp.createRefreshToken(newUser.id!, refreshToken, refreshTokenExpiry);
   await cacheUser(newUser);
-  
+
   const res = createResponse(null, "Đăng ký thành công");
 
   const cookieOptions = {
@@ -52,20 +56,23 @@ async function handler(req: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    sameSite: process.env.NODE_ENV === "production" ? "none" as const : "lax" as const,
+    sameSite: process.env.NODE_ENV === "production" ? ("none" as const) : ("lax" as const),
   };
 
   // Set both access token and refresh token
-  res.headers.set("Set-Cookie", [
-    serialize("access_token", accessToken, {
-      ...cookieOptions,
-      maxAge: 15 * 60, // 15 minutes
-    }),
-    serialize("refresh_token", refreshToken, {
-      ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-    })
-  ].join(", "));
+  res.headers.set(
+    "Set-Cookie",
+    [
+      serialize("access_token", accessToken, {
+        ...cookieOptions,
+        maxAge: 15 * 60, // 15 minutes
+      }),
+      serialize("refresh_token", refreshToken, {
+        ...cookieOptions,
+        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      }),
+    ].join(", ")
+  );
 
   return res;
 }

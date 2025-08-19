@@ -30,7 +30,7 @@ async function handler(req: NextRequest) {
   const user = new User();
 
   user.id = resetToken.user_id;
-  user.password = hashedPassword;
+  user.password_hash = hashedPassword; // Sử dụng password_hash thay vì password
   await baseRepo.update(user);
 
   // 3. Xoá token sau khi dùng
