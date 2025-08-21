@@ -20,20 +20,16 @@ export const VARIANT_STYLES_BTN = {
   warning:
     "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm border border-warning/20 focus-visible:ring-2 focus-visible:ring-warning/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 
-  info:
-    "bg-info text-info-foreground hover:bg-info/90 shadow-sm border border-info/20 focus-visible:ring-2 focus-visible:ring-info/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+  info: "bg-info text-info-foreground hover:bg-info/90 shadow-sm border border-info/20 focus-visible:ring-2 focus-visible:ring-info/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 
   // Ghost: minimal
-  ghost:
-    "bg-transparent hover:bg-accent/60 hover:text-accent-foreground backdrop-blur-sm transition-colors",
+  ghost: "bg-transparent hover:bg-accent/60 hover:text-accent-foreground backdrop-blur-sm transition-colors",
 
   // Link: chỉ văn bản
-  link:
-    "text-primary bg-transparent underline-offset-4 hover:underline hover:text-primary/85 transition-colors",
+  link: "text-primary bg-transparent underline-offset-4 hover:underline hover:text-primary/85 transition-colors",
 
   // Gradient: tuỳ chọn, giảm shadow
-  gradient:
-    "bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500 text-white hover:opacity-90 shadow-sm border border-white/10",
+  gradient: "bg-gradient-to-r from-primary via-secondary to-accent text-primary-foreground hover:opacity-90 shadow-sm border border-primary/10",
 };
 
 export const SIZE_STYLES_BTN = {

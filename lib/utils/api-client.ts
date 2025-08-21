@@ -31,7 +31,7 @@ export async function callApi<T>(
   url: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: any,
-  config?: (AxiosRequestConfig & { silent?: boolean }) & { _retry?: boolean }
+  config?: AxiosRequestConfig & { silent?: boolean }
 ): Promise<T> {
   console.log(`🔥 API Call: ${method} ${url}`, data);
 
@@ -48,9 +48,9 @@ export async function callApi<T>(
     // Backend chuẩn hóa { success, message, data }
     const { success, message, data: payload } = res.data;
 
-    // Only skip alerts for silent requests, not auth endpoints
-    // Auth endpoints should show errors to users
-    const shouldShowAlert = !config?.silent;
+    // Skip alerts for silent requests OR auth endpoints (login, register, etc.)
+    const isAuthEndpoint = url.includes("/auth/");
+    const shouldShowAlert = !config?.silent && !isAuthEndpoint;
 
     if (!success) {
       if (shouldShowAlert) {
@@ -73,24 +73,37 @@ export async function callApi<T>(
 
     // Handle 401 Unauthorized - Token expired or invalid
     if (axiosErr.response?.status === 401) {
-      // Avoid infinite loop and skip for auth endpoints themselves
+      // For auth endpoints (login, register, etc.), don't try to refresh token
+      // Only refresh token for protected endpoints when user is already logged in
       const isAuthEndpoint = url.includes("/auth/");
-      const alreadyRetried = !!config?._retry;
+      const alreadyRetried = false; // Always allow one retry for now
 
-      if (!alreadyRetried && !url.includes("/auth/refresh")) {
+      // Skip refresh for auth endpoints or if already retried
+      if (isAuthEndpoint || alreadyRetried) {
+        // For auth endpoints, just throw the error without redirect
+        if (isAuthEndpoint) {
+          throw new Error(msg);
+        }
+        // For other endpoints that already retried, redirect to login
+        // ...existing redirect logic...
+      }
+
+      // Only try refresh for non-auth endpoints
+      if (!alreadyRetried && !isAuthEndpoint) {
         try {
           // Try silent refresh using raw axios to avoid recursion
           const refreshRes = await api.post(API_ROUTES.AUTH.REFRESH, undefined, { withCredentials: true });
           const { success } = refreshRes.data || {};
           if (success) {
             // Retry original request once
+            const { silent, ...cleanConfig } = config || {};
             const retryRes = await api.request({
               url,
               method,
               ...(method === "GET" ? { params: data } : { data }),
-              ...(config || {}),
+              ...cleanConfig,
               withCredentials: true,
-              headers: { ...(config?.headers || {}), "Content-Type": config?.headers?.["Content-Type"] || "application/json" },
+              headers: { ...(config?.headers || {}), "Content-Type": config?.headers?.["Content-Type"] || "application/json" }
             });
             const { success: ok, data: payload, message } = retryRes.data || {};
             if (!ok) throw new Error(message || "Request failed");

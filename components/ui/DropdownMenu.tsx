@@ -45,9 +45,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
   // Inject ShadCN animations
-  React.useLayoutEffect(() => {
-    useShadCNAnimations();
-  }, []);
+  useShadCNAnimations();
 
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;

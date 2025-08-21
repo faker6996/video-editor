@@ -68,7 +68,8 @@ export const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
     };
 
     // Generate unique name if not provided
-    const radioName = name || `radio-group-${React.useId()}`;
+    const uniqueId = React.useId();
+    const radioName = name || `radio-group-${uniqueId}`;
 
     return (
       <RadioGroupContext.Provider
@@ -482,7 +483,8 @@ export const RadioButtonGroup: React.FC<RadioButtonGroupProps> = ({
     }
   };
 
-  const radioName = name || `radio-button-group-${React.useId()}`;
+  const uniqueId = React.useId();
+  const radioName = name || `radio-button-group-${uniqueId}`;
 
   return (
     <div 

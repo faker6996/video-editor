@@ -43,8 +43,16 @@ export default function SubscriptionContainer() {
         {sub ? (
           <div className="text-sm space-y-1 text-muted-foreground">
             <div>{t("status")}: {sub.status}</div>
-            {sub.start_at && <div>{t("start")}: {new Date(sub.start_at).toLocaleString()}</div>}
-            {sub.end_at && <div>{t("end")}: {new Date(sub.end_at).toLocaleString()}</div>}
+            {sub.start_at ? (
+              <div>
+                {t("start")}: {new Date(sub.start_at as string).toLocaleString()}
+              </div>
+            ) : null}
+            {sub.end_at ? (
+              <div>
+                {t("end")}: {new Date(sub.end_at as string).toLocaleString()}
+              </div>
+            ) : null}
             <div>{t("autoRenew")}: {sub.auto_renew ? "Yes" : "No"}</div>
             {sub.payment_gateway && <div>{t("gateway")}: {sub.payment_gateway}</div>}
           </div>

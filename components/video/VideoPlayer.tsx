@@ -10,7 +10,7 @@ interface Props {
 
 export default function VideoPlayer({ src, subtitleUrl, language = 'vi' }: Props) {
   return (
-    <div className="rounded-lg border bg-black overflow-hidden">
+    <div className="rounded-lg border bg-muted overflow-hidden">
       <video controls className="w-full h-auto" crossOrigin="anonymous">
         <source src={src} type="video/mp4" />
         {subtitleUrl && (

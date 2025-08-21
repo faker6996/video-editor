@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Crown, Check, Star, Zap, Shield, Clock, Infinity, CreditCard, TrendingUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { Badge, StatusBadge, TagBadge, GradientBadge } from "@/components/ui/Badge";
@@ -23,6 +24,7 @@ interface Plan {
 }
 
 export default function PlansContainer() {
+  const t = useTranslations("Common");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -38,9 +40,9 @@ export default function PlansContainer() {
     setLoading(true);
     try {
       await callApi(API_ROUTES.SUBSCRIPTIONS.ME, "POST", { planCode: code, gateway: "momo" });
-      alert("Subscription created (mock). Role cookie set.");
+      alert(t("subscriptionCreated"));
     } catch (e: any) {
-      alert(e?.message || "Failed to subscribe");
+      alert(e?.message || t("subscriptionFailed"));
     } finally {
       setLoading(false);
       setSelectedPlan(null);
@@ -52,24 +54,24 @@ export default function PlansContainer() {
   };
 
   const getPlanIcon = (code: string) => {
-    if (code.includes("LIFETIME")) return <Crown className="w-6 h-6 text-yellow-500" />;
-    if (code.includes("YEAR")) return <Star className="w-6 h-6 text-purple-500" />;
-    if (code.includes("MONTH")) return <Zap className="w-6 h-6 text-blue-500" />;
-    return <Shield className="w-6 h-6 text-green-500" />;
+    if (code.includes("LIFETIME")) return <Crown className="w-6 h-6 text-warning" />;
+    if (code.includes("YEAR")) return <Star className="w-6 h-6 text-primary" />;
+    if (code.includes("MONTH")) return <Zap className="w-6 h-6 text-info" />;
+    return <Shield className="w-6 h-6 text-success" />;
   };
 
   const getPlanBadge = (plan: Plan) => {
     if (plan.is_lifetime) {
       return (
         <GradientBadge size="sm" pulse>
-          🏆 Most Popular
+          🏆 {t("mostPopular")}
         </GradientBadge>
       );
     }
     if (plan.code.includes("YEAR")) {
       return (
         <Badge variant="primary" size="sm">
-          💎 Best Value
+          💎 {t("bestValue")}
         </Badge>
       );
     }
@@ -91,17 +93,17 @@ export default function PlansContainer() {
   };
 
   const getDefaultFeatures = (code: string) => {
-    const baseFeatures = ["HD Video Export", "Basic Editing Tools", "Cloud Storage", "24/7 Support"];
+    const baseFeatures = [t("hdVideoExport"), t("basicEditingTools"), t("cloudStorage"), t("support247")];
 
     if (code.includes("VIP")) {
       return [
         ...baseFeatures,
-        "4K Video Export",
-        "Advanced Filters",
-        "Auto Subtitles",
-        "Multi-language Support",
-        "Priority Processing",
-        "Advanced Analytics",
+        t("fourKVideoExport"),
+        t("advancedFilters"),
+        t("autoSubtitles"),
+        t("multiLanguageSupport"),
+        t("priorityProcessing"),
+        t("advancedAnalytics"),
       ];
     }
     return baseFeatures;
@@ -116,14 +118,14 @@ export default function PlansContainer() {
       {/* Enhanced Header */}
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center gap-3">
-          <Crown className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Choose Your Plan</h1>
+          <Crown className="w-8 h-8 text-warning" />
+          <h1 className="text-3xl font-bold text-foreground">{t("chooseYourPlan")}</h1>
           <Badge variant="gradient" size="sm">
-            New Features!
+            {t("newFeatures")}
           </Badge>
         </div>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Unlock powerful video editing features and take your content to the next level
+          {t("unlockPowerfulFeatures")}
         </p>
         <div className="flex items-center justify-center gap-4">
           <StatusBadge status="online" size="sm" />
@@ -133,46 +135,46 @@ export default function PlansContainer() {
       </div>
 
       {/* Enhanced Stats Banner */}
-      <Card className="p-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+      <Card className="p-6 bg-gradient-to-r from-primary/5 to-info/5 dark:from-primary/15 dark:to-info/15 border border-primary/20 dark:border-primary/30">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
+              <TrendingUp className="w-5 h-5 text-success" />
               <span className="text-2xl font-bold">10K+</span>
               <Badge variant="success" size="xs">
-                Growing
+                {t("growing")}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">Videos Processed</p>
-            <Progress value={85} variant="success" size="sm" className="w-20 mx-auto" />
+            <p className="text-sm text-muted-foreground">{t("videosProcessed")}</p>
+            <Progress value={85} className="w-20 mx-auto" size="sm" variant="success" />
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
               <span className="text-2xl font-bold">24/7</span>
               <Badge variant="primary" size="xs" pulse>
-                Live
+                {t("live")}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">Support Available</p>
-            <Progress value={100} variant="primary" size="sm" className="w-20 mx-auto" />
+            <p className="text-sm text-muted-foreground">{t("supportAvailable")}</p>
+            <Progress value={100} className="w-20 mx-auto" size="sm" variant="primary" />
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
+              <Shield className="w-5 h-5 text-warning" />
               <span className="text-2xl font-bold">99.9%</span>
               <Badge variant="outline" size="xs">
-                Guaranteed
+                {t("guaranteed")}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">Uptime Guarantee</p>
-            <Progress value={99.9} variant="warning" size="sm" className="w-20 mx-auto" />
+            <p className="text-sm text-muted-foreground">{t("uptimeGuarantee")}</p>
+            <Progress value={99.9} className="w-20 mx-auto" size="sm" variant="warning" />
           </div>
         </div>
       </Card>
 
       {/* Enhanced Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8 pt-4">
         {plans.map((plan) => {
           const features = plan.features?.features || getDefaultFeatures(plan.code);
           const isRecommended = isPlanRecommended(plan);
@@ -182,12 +184,12 @@ export default function PlansContainer() {
           return (
             <Card
               key={plan.id}
-              className={`relative p-6 transition-all duration-200 hover:shadow-lg ${
-                isRecommended ? "ring-2 ring-primary/20 border-primary/30 transform hover:scale-105" : ""
+              className={`relative p-6 pt-8 transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 dark:hover:shadow-primary/20 ${
+                isRecommended ? "ring-2 ring-primary/20 dark:ring-primary/30 border-primary/30 dark:border-primary/40 transform hover:scale-105" : ""
               }`}
             >
               {/* Enhanced Recommended Badge */}
-              {getPlanBadge(plan) && <div className="absolute -top-3 left-1/2 -translate-x-1/2">{getPlanBadge(plan)}</div>}
+              {getPlanBadge(plan) && <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">{getPlanBadge(plan)}</div>}
 
               <div className="space-y-6">
                 {/* Enhanced Plan Header */}
@@ -208,8 +210,8 @@ export default function PlansContainer() {
 
                   {/* Popularity Indicator */}
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-xs text-muted-foreground">Popularity:</span>
-                    <Progress value={popularityScore} variant="primary" size="sm" className="w-16" />
+                    <span className="text-xs text-muted-foreground">{t("popularity")}:</span>
+                    <Progress value={popularityScore} className="w-16" size="sm" variant="primary" />
                     <Badge variant="ghost" size="xs">
                       {popularityScore}%
                     </Badge>
@@ -222,7 +224,7 @@ export default function PlansContainer() {
                     {formatPrice(plan.price_cents, plan.currency)}
                     {plan.price_cents === 0 && (
                       <Badge variant="success" size="sm">
-                        FREE
+                        {t("free")}
                       </Badge>
                     )}
                   </div>
@@ -231,14 +233,14 @@ export default function PlansContainer() {
                       <>
                         <Infinity className="w-4 h-4" />
                         <Badge variant="gradient" size="xs">
-                          One-time payment
+                          {t("oneTimePayment")}
                         </Badge>
                       </>
                     ) : (
                       <>
                         <Clock className="w-4 h-4" />
                         <Badge variant="outline" size="xs">
-                          {plan.duration_days} days
+                          {t("daysCount", { days: plan.duration_days ?? 0 })}
                         </Badge>
                       </>
                     )}
@@ -248,9 +250,9 @@ export default function PlansContainer() {
                 {/* Enhanced Features */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">What's included:</h4>
+                    <h4 className="font-medium text-sm">{t("whatsIncluded")}:</h4>
                     <Badge variant="info" size="xs">
-                      {features.length} features
+                      {t("featuresCount", { count: features.length })}
                     </Badge>
                   </div>
                   <ul className="space-y-2">
@@ -260,7 +262,7 @@ export default function PlansContainer() {
                         <span>{feature}</span>
                         {index < 2 && (
                           <Badge variant="success" size="xs">
-                            Popular
+                            {t("popular")}
                           </Badge>
                         )}
                       </li>
@@ -268,7 +270,7 @@ export default function PlansContainer() {
                     {features.length > 6 && (
                       <li className="flex items-center gap-2">
                         <Badge variant="primary" size="sm">
-                          +{features.length - 6} more features
+                          {t("moreFeatures", { count: features.length - 6 })}
                         </Badge>
                       </li>
                     )}
@@ -287,7 +289,7 @@ export default function PlansContainer() {
                       <>
                         <Clock className="w-4 h-4 animate-spin" />
                         <Badge variant="warning" size="xs">
-                          Processing...
+                          {t("processing")}
                         </Badge>
                       </>
                     ) : (
@@ -295,10 +297,10 @@ export default function PlansContainer() {
                         <CreditCard className="w-4 h-4" />
                         {plan.is_lifetime ? (
                           <Badge variant="gradient" size="sm">
-                            Get Lifetime Access
+                            {t("getLifetimeAccess")}
                           </Badge>
                         ) : (
-                          "Start Free Trial"
+                          t("startFreeTrial")
                         )}
                       </>
                     )}
@@ -314,7 +316,7 @@ export default function PlansContainer() {
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-2">
-            <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
+            <h3 className="text-lg font-semibold">{t("frequentlyAskedQuestions")}</h3>
             <Badge variant="info" size="sm">
               FAQ
             </Badge>
@@ -322,42 +324,42 @@ export default function PlansContainer() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="font-medium">Can I change my plan anytime?</h4>
+                <h4 className="font-medium">{t("canChangePlanAnytime")}</h4>
                 <StatusBadge status="online" size="xs">
-                  ✓ Yes
+                  ✓ {t("yes")}
                 </StatusBadge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.
+                {t("canChangePlanAnswer")}
               </p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="font-medium">Is there a free trial?</h4>
+                <h4 className="font-medium">{t("isThereFreeTrial")}</h4>
                 <StatusBadge status="idle" size="xs">
-                  7 days
+                  7 {t("days")}
                 </StatusBadge>
               </div>
-              <p className="text-sm text-muted-foreground">All paid plans come with a 7-day free trial. No credit card required to start.</p>
+              <p className="text-sm text-muted-foreground">{t("freeTrialAnswer")}</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="font-medium">What payment methods do you accept?</h4>
+                <h4 className="font-medium">{t("whatPaymentMethods")}</h4>
                 <Badge variant="primary" size="xs">
-                  Multiple
+                  {t("multiple")}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">We accept all major credit cards, PayPal, and local payment methods like MoMo.</p>
+              <p className="text-sm text-muted-foreground">{t("paymentMethodsAnswer")}</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="font-medium">Can I cancel anytime?</h4>
+                <h4 className="font-medium">{t("canCancelAnytime")}</h4>
                 <StatusBadge status="away" size="xs">
-                  ⚠️ Anytime
+                  ⚠️ {t("anytime")}
                 </StatusBadge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Yes, you can cancel your subscription at any time. Your access continues until the end of the billing period.
+                {t("cancelAnytimeAnswer")}
               </p>
             </div>
           </div>

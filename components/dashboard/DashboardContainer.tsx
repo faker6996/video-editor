@@ -250,7 +250,7 @@ export default function DashboardContainer() {
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Avatar src="" fallback="JD" size="sm" />
               <div className="flex-1">
-                <p className="text-sm font-medium">Project "Summer Vibes" completed</p>
+                <p className="text-sm font-medium">Project &quot;Summer Vibes&quot; completed</p>
                 <p className="text-xs text-muted-foreground">2 hours ago</p>
               </div>
               <Badge variant="success" size="xs">

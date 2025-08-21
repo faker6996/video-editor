@@ -41,9 +41,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
 
   // Inject ShadCN animations
-  React.useLayoutEffect(() => {
-    useShadCNAnimations();
-  }, []);
+  useShadCNAnimations();
 
   const listRef = React.useRef<(HTMLLIElement | null)[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);

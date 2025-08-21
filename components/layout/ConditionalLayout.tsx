@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "./Sidebar";
 import TopHeader from "./TopHeader";
@@ -15,12 +15,21 @@ const authPages = ["/login", "/register", "/forgot-password", "/reset-password"]
 
 export default function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading } = useAuth();
   const [sidebarWidth, setSidebarWidth] = useState(256); // Default sidebar width
 
   // Check if current page needs authentication layout
   const isAuthPage = authPages.some((page) => pathname.includes(page));
   const showLayout = !isAuthPage && user && !loading;
+
+  // Redirect unauthenticated users to login page
+  useEffect(() => {
+    if (!loading && !user && !isAuthPage) {
+      const locale = pathname.split('/')[1];
+      router.push(`/${locale}/login`);
+    }
+  }, [user, loading, isAuthPage, pathname, router]);
 
   // Listen for sidebar toggle events
   useEffect(() => {
@@ -101,13 +110,15 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
     );
   }
 
-  // Fallback for unauthenticated users
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-2xl font-semibold">Access Denied</h1>
-        <p className="text-muted-foreground">Please login to access this page</p>
+  // Show loading or fallback for unauthenticated users
+  if (!user && !isAuthPage) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-semibold">Access Denied</h1>
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }

@@ -1,6 +1,9 @@
+"use client";
+
+import * as React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FacebookIcon, GoogleIcon } from "@/components/icons/SocialIcons";
-import Input from "@/components/ui/Input";
+import { Form, FormInput, FormCheckbox, FormActions, FormSubmitButton } from "@/components/ui/Form";
 import { API_ROUTES } from "@/lib/constants/api-routes";
 import { HTTP_METHOD_ENUM, LOCALE } from "@/lib/constants/enum";
 import { callApi } from "@/lib/utils/api-client";
@@ -12,7 +15,6 @@ import Button from "../ui/Button";
 import { useToast } from "../ui/Toast";
 import { loading } from "@/lib/utils/loading";
 import { User } from "@/lib/models/user";
-import { Checkbox } from "@/components/ui/CheckBox";
 
 interface SsoReq {
   redirectUrl: string;
@@ -24,6 +26,7 @@ export default function LoginContainer() {
   const locale = useLocale();
   const t = useTranslations("LoginPage");
   const { addToast } = useToast();
+  const [passwordKey, setPasswordKey] = React.useState(0); // Key to force password field reset
 
   const handleLoginWithFacebook = async () => {
     loading.show(t("social.loggingInFacebook"));
@@ -56,14 +59,8 @@ export default function LoginContainer() {
       loading.hide();
     }
   };
-  const handleEmailPasswordLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
 
-    const form = new FormData(e.currentTarget);
-    const email = form.get("email") as string;
-    const password = form.get("password") as string;
-    const rememberMe = form.get("rememberMe") === "on";
-
+  const handleEmailPasswordLogin = async (values: { email: string; password: string; rememberMe: boolean }) => {
     loading.show(t("loggingIn"));
     try {
       // Use silent flag to prevent alert() and only use toast
@@ -71,9 +68,9 @@ export default function LoginContainer() {
         API_ROUTES.AUTH.LOGIN,
         HTTP_METHOD_ENUM.POST,
         {
-          email,
-          password,
-          rememberMe,
+          email: values.email,
+          password: values.password,
+          rememberMe: values.rememberMe,
         },
         { silent: true }
       );
@@ -93,6 +90,10 @@ export default function LoginContainer() {
       router.push(`/${locale}/dashboard`);
     } catch (err: any) {
       console.error("Login error:", err);
+
+      // Force password field to reset by changing its key
+      setPasswordKey((prev) => prev + 1);
+
       addToast({
         type: "error",
         message: err?.message || t("errors.loginFailed"),
@@ -115,38 +116,37 @@ export default function LoginContainer() {
 
         {/* Form */}
         <div className="rounded-xl border border-border/60 bg-card/80 backdrop-blur text-card-foreground px-6 py-8 shadow-sm sm:px-10">
-          <form className="space-y-6" onSubmit={handleEmailPasswordLogin}>
-            <Input
-              label={t("emailLabel")}
-              name="email"
-              type="email"
-              required
-              className="mt-1 block w-full rounded-md border border-border bg-input text-foreground px-3 py-2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            />
+          <Form
+            initialValues={{ email: "", password: "", rememberMe: false }}
+            validationSchema={{
+              email: { required: true, email: true },
+              password: { required: true, minLength: 6 },
+            }}
+            onSubmit={handleEmailPasswordLogin}
+            className="space-y-6"
+          >
+            <FormInput name="email" type="email" label={t("emailLabel")} placeholder="Enter your email" required />
 
-            <Input
-              label={t("passwordLabel")}
-              type="password"
+            <FormInput
+              key={passwordKey} // Force re-render when key changes
               name="password"
+              type="password"
+              label={t("passwordLabel")}
+              placeholder="Enter your password"
               required
-              className="mt-1 block w-full rounded-md border border-border bg-input text-foreground px-3 py-2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
             />
 
             <div className="flex items-center justify-between">
-              <Checkbox name="rememberMe" label={<span className="text-sm text-muted-foreground">{t("rememberMe")}</span>} />
+              <FormCheckbox name="rememberMe" label={t("rememberMe")} />
               <Link href={`/${locale}/forgot-password`} className="text-sm text-primary hover:underline font-medium">
                 {t("forgotPassword")}
               </Link>
             </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full rounded-md bg-primary text-primary-foreground hover:brightness-110 font-medium shadow-sm transition"
-            >
-              {t("signInButton")}
-            </Button>
-          </form>
+            <FormActions className="justify-center">
+              <FormSubmitButton className="w-full">{t("signInButton")}</FormSubmitButton>
+            </FormActions>
+          </Form>
 
           {/* Divider */}
           <div className="mt-6 flex items-center">

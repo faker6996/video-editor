@@ -20,33 +20,15 @@ import {
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { callApi } from "@/lib/utils/api-client";
 import { API_ROUTES } from "@/lib/constants/api-routes";
-
-// Badge component
-const Badge = ({ children, variant = "secondary", className = "" }: {
-  children: React.ReactNode;
-  variant?: "success" | "warning" | "secondary" | "primary" | "premium";
-  className?: string;
-}) => {
-  const variants = {
-    success: "bg-success/10 text-success border-success/20",
-    warning: "bg-warning/10 text-warning border-warning/20",
-    secondary: "bg-muted text-muted-foreground border-border",
-    primary: "bg-primary/10 text-primary border-primary/20",
-    premium: "bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0",
-  };
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${variants[variant]} ${className}`}>
-      {children}
-    </span>
-  );
-};
+import { useTranslations } from "next-intl";
 
 export default function EditorContainer() {
   const [role, setRole] = useState<string>("standard");
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("Common");
 
   useEffect(() => {
     callApi<{ role: string }>(API_ROUTES.ME.ROLE, "GET", undefined, { silent: true })
@@ -63,67 +45,67 @@ export default function EditorContainer() {
 
   const editorFeatures = [
     {
-      title: "Video Trimming",
-      description: "Cut and trim your videos with precision",
+      title: t("videoTrimming"),
+      description: t("cutTrimVideos"),
       icon: Scissors,
       available: true,
       color: "bg-primary/10 text-primary",
     },
     {
-      title: "Audio Controls",
-      description: "Adjust volume, add music and sound effects",
+      title: t("audioControls"),
+      description: t("adjustVolumeMusic"),
       icon: Volume2,
       available: true,
       color: "bg-success/10 text-success",
     },
     {
-      title: "Text Overlay",
-      description: "Add titles, captions and custom text",
+      title: t("textOverlay"),
+      description: t("addTitlesCaptions"),
       icon: Type,
       available: isVip,
       color: "bg-info/10 text-info",
     },
     {
-      title: "Filters & Effects",
-      description: "Apply stunning visual effects and filters",
+      title: t("filtersEffects"),
+      description: t("applyStunningEffects"),
       icon: Palette,
       available: isVip,
       color: "bg-warning/10 text-warning",
     },
     {
-      title: "Multi-layer Editing",
-      description: "Work with multiple video and audio tracks",
+      title: t("multiLayerEditing"),
+      description: t("workWithMultipleTracks"),
       icon: Layers,
       available: isVip,
-      color: "bg-purple-500/10 text-purple-600",
+      color: "bg-secondary/10 text-secondary-foreground",
     },
     {
-      title: "Image Overlay",
-      description: "Add logos, watermarks and images",
+      title: t("imageOverlay"),
+      description: t("addLogosWatermarks"),
       icon: ImageIcon,
       available: isVip,
-      color: "bg-pink-500/10 text-pink-600",
+      color: "bg-accent/10 text-accent-foreground",
     },
   ];
 
   const quickActions = [
     {
-      title: "Upload Video",
-      description: "Start by uploading your video file",
+      title: t("uploadVideo"),
+      description: t("startByUploadingVideo"),
       icon: Upload,
       action: () => {},
       variant: "primary" as const,
     },
     {
-      title: "Load Project",
-      description: "Continue working on existing project",
+      title: t("loadProject"),
+      description: t("continueWorkingProject"),
       icon: Play,
       action: () => {},
       variant: "outline" as const,
     },
     {
-      title: "Settings",
-      description: "Configure editor preferences",
+      title: t("settings"),
+      description: t("configureEditorPreferences"),
       icon: Settings,
       action: () => {},
       variant: "outline" as const,
@@ -133,7 +115,7 @@ export default function EditorContainer() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">Loading editor...</div>
+        <div className="text-muted-foreground">{t("loadingPage")}</div>
       </div>
     );
   }
@@ -145,17 +127,17 @@ export default function EditorContainer() {
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <Play className="w-8 h-8 text-primary" />
-            Video Editor
+            {t("videoEditor")}
           </h1>
-          <p className="text-muted-foreground mt-1">Professional video editing tools at your fingertips</p>
+          <p className="text-muted-foreground mt-1">{t("professionalVideoEditing")}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant={isVip ? "premium" : "secondary"}>{isVip ? "VIP User" : "Standard User"}</Badge>
+          <Badge variant={isVip ? "gradient" : "default"}>{isVip ? t("vipUser") : t("standardUser")}</Badge>
           {!isVip && (
             <Link href="../plans">
               <Button variant="primary" className="gap-2">
                 <Crown className="w-4 h-4" />
-                Upgrade to VIP
+                {t("upgradeToVIP")}
               </Button>
             </Link>
           )}
@@ -170,13 +152,13 @@ export default function EditorContainer() {
               <Crown className="w-8 h-8 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold">Unlock Premium Features</h3>
-              <p className="text-muted-foreground mt-1">Upgrade to VIP to access advanced editing tools, effects, and unlimited exports</p>
+              <h3 className="text-lg font-semibold">{t("unlockPremiumFeatures")}</h3>
+              <p className="text-muted-foreground mt-1">{t("upgradeToVipAccess")}</p>
             </div>
             <Link href="../plans">
               <Button variant="primary" className="gap-2">
                 <Sparkles className="w-4 h-4" />
-                View Plans
+                {t("viewPlans")}
               </Button>
             </Link>
           </div>
@@ -185,7 +167,7 @@ export default function EditorContainer() {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold mb-4">{t("quickActions")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {quickActions.map((action, index) => (
             <Card key={index} className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer group">
@@ -208,7 +190,7 @@ export default function EditorContainer() {
 
       {/* Features Grid */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Editor Features</h2>
+        <h2 className="text-xl font-semibold mb-4">{t("editorFeatures")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {editorFeatures.map((feature, index) => (
             <Card
@@ -226,20 +208,24 @@ export default function EditorContainer() {
                 <div>
                   <h3 className="font-semibold flex items-center gap-2">
                     {feature.title}
-                    {!feature.available && <Badge variant="secondary">VIP Only</Badge>}
+                    {!feature.available && (
+                      <Badge variant="outline" size="xs">
+                        {t("vipOnly")}
+                      </Badge>
+                    )}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
                 </div>
 
                 {feature.available ? (
                   <Button variant="outline" size="sm" className="w-full">
-                    Use Feature
+                    {t("useFeature")}
                   </Button>
                 ) : (
                   <Link href="../plans" className="block">
                     <Button variant="outline" size="sm" className="w-full gap-2">
                       <Crown className="w-3 h-3" />
-                      Upgrade to Unlock
+                      {t("upgradeToUnlock")}
                     </Button>
                   </Link>
                 )}
@@ -256,19 +242,17 @@ export default function EditorContainer() {
             <Play className="w-12 h-12 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">Editor Workspace</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              The video editing interface will be available here. Upload a video or load an existing project to get started.
-            </p>
+            <h3 className="text-xl font-semibold mb-2">{t("editorWorkspace")}</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">{t("videoEditingInterface")}</p>
           </div>
           <div className="flex gap-3 justify-center">
             <Button variant="primary" className="gap-2">
               <Upload className="w-4 h-4" />
-              Upload Video
+              {t("uploadVideo")}
             </Button>
             <Button variant="outline" className="gap-2">
               <Download className="w-4 h-4" />
-              Load Project
+              {t("loadProject")}
             </Button>
           </div>
         </div>
@@ -278,24 +262,24 @@ export default function EditorContainer() {
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          Pro Tips
+          {t("proTips")}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <h4 className="font-medium">Keyboard Shortcuts</h4>
-            <p className="text-sm text-muted-foreground">Use Space to play/pause, J/K/L for timeline navigation</p>
+            <h4 className="font-medium">{t("keyboardShortcuts")}</h4>
+            <p className="text-sm text-muted-foreground">{t("keyboardShortcutsDesc")}</p>
           </div>
           <div className="space-y-2">
-            <h4 className="font-medium">File Formats</h4>
-            <p className="text-sm text-muted-foreground">Support for MP4, MOV, AVI, and more video formats</p>
+            <h4 className="font-medium">{t("fileFormats")}</h4>
+            <p className="text-sm text-muted-foreground">{t("fileFormatsDesc")}</p>
           </div>
           <div className="space-y-2">
-            <h4 className="font-medium">Export Quality</h4>
-            <p className="text-sm text-muted-foreground">Export in HD, Full HD, or 4K resolution (VIP only)</p>
+            <h4 className="font-medium">{t("exportQuality")}</h4>
+            <p className="text-sm text-muted-foreground">{t("exportQualityDesc")}</p>
           </div>
           <div className="space-y-2">
-            <h4 className="font-medium">Auto-Save</h4>
-            <p className="text-sm text-muted-foreground">Your projects are automatically saved every 5 minutes</p>
+            <h4 className="font-medium">{t("autoSave")}</h4>
+            <p className="text-sm text-muted-foreground">{t("autoSaveDesc")}</p>
           </div>
         </div>
       </Card>

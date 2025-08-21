@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Camera,
   Calendar,
@@ -30,6 +31,8 @@ import Progress from "@/components/ui/Progress";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 export default function ProfileContainer() {
+  const t = useTranslations("ProfilePage");
+  const common = useTranslations("Common");
   const [user, setUser] = useState(new User());
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
@@ -63,14 +66,13 @@ export default function ProfileContainer() {
     });
   };
 
-  // Enhanced stats with progress indicators
   const stats = {
     videosProcessed: 15,
     totalProjects: 8,
-    storageUsed: 2.4, // GB
-    storageLimit: 10, // GB
+    storageUsed: 2.4,
+    storageLimit: 10,
     accountAge: Math.floor((Date.now() - new Date(user.created_at || Date.now()).getTime()) / (1000 * 60 * 60 * 24)),
-    completionRate: 85, // Percentage of completed projects
+    completionRate: 85,
   };
 
   const getUserTier = () => {
@@ -84,32 +86,32 @@ export default function ProfileContainer() {
 
   const quickActions = [
     {
-      title: "Edit Profile",
-      description: "Update your personal information",
+      title: t("editProfile"),
+      description: common("updatePersonalInfo"),
       icon: Edit3,
       action: () => {},
       color: "bg-primary/10 text-primary",
       badge: "Popular",
     },
     {
-      title: "Account Settings",
-      description: "Manage privacy and security",
+      title: common("settings"),
+      description: common("managePrivacySecurity"),
       icon: Settings,
       action: () => {},
       color: "bg-info/10 text-info",
       badge: null,
     },
     {
-      title: "Notifications",
-      description: "Configure alerts and emails",
+      title: common("notifications"),
+      description: common("configureAlertsEmails"),
       icon: Bell,
       action: () => {},
       color: "bg-warning/10 text-warning",
       badge: "3 New",
     },
     {
-      title: "Security",
-      description: "Password and 2FA settings",
+      title: common("security"),
+      description: common("passwordAnd2FA"),
       icon: Shield,
       action: () => {},
       color: "bg-success/10 text-success",
@@ -118,47 +120,50 @@ export default function ProfileContainer() {
   ];
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: Activity },
-    { id: "settings", label: "Settings", icon: Settings },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "billing", label: "Billing", icon: Crown },
+    { id: "overview", label: common("overview"), icon: Activity },
+    { id: "settings", label: common("settings"), icon: Settings },
+    { id: "security", label: common("security"), icon: Shield },
+    { id: "billing", label: common("billing"), icon: Crown },
   ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">Loading profile...</div>
+        <div className="text-muted-foreground">{t("loadingProfile")}</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Profile Header */}
       <Card className="relative overflow-hidden">
-        {/* Enhanced Cover Image */}
         <div className="h-48 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 relative">
           <div className="absolute top-4 left-4">
             <GradientBadge size="sm">
-              {userTier.icon} {userTier.tier} User
+              {userTier.icon}{" "}
+              {userTier.tier === "Pro Max"
+                ? common("proUser")
+                : userTier.tier === "Pro"
+                ? common("proUser")
+                : userTier.tier === "Active"
+                ? common("vipUser")
+                : common("standardUser")}
             </GradientBadge>
           </div>
           <Button size="sm" variant="outline" className="absolute bottom-4 right-4 bg-background/90 hover:bg-background backdrop-blur-sm">
             <Camera className="h-4 w-4 mr-2" />
-            Edit Cover
+            {common("editCover")}
           </Button>
         </div>
 
-        {/* Enhanced Profile Info */}
         <div className="p-6">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col md:flex-row md:items-end gap-6">
-              {/* Enhanced Avatar */}
               <div className="relative -mt-20">
                 <Avatar src={user.avatar_url} size="lg" className="border-4 border-background shadow-lg w-32 h-32" />
                 <div className="absolute -top-2 -right-2">
                   <StatusBadge status="online" size="sm">
-                    Online
+                    {t("online")}
                   </StatusBadge>
                 </div>
                 <Button size="sm" variant="outline" className="absolute bottom-2 right-2 rounded-full bg-background hover:bg-muted p-2">
@@ -166,7 +171,6 @@ export default function ProfileContainer() {
                 </Button>
               </div>
 
-              {/* Enhanced User Info */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-3xl font-bold text-foreground">{user.name || "User"}</h1>
@@ -183,22 +187,21 @@ export default function ProfileContainer() {
                   <p className="text-muted-foreground">@{user.email?.split("@")[0]}</p>
                   {user.email_verified && (
                     <StatusBadge status="online" size="xs">
-                      ✓ Verified
+                      {t("verified")}
                     </StatusBadge>
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    Joined {formatDate(user.created_at)}
+                    {common("joined")} {formatDate(user.created_at)}
                   </div>
                   <Badge variant="outline" size="xs">
-                    {stats.accountAge} days active
+                    {common("daysCount", { days: stats.accountAge })}
                   </Badge>
                 </div>
-                {/* Activity Progress */}
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">Activity Level:</span>
+                  <span className="text-xs text-muted-foreground">{t("activityLevel")}</span>
                   <Progress value={stats.completionRate} variant="success" size="sm" className="w-24" />
                   <Badge variant="success" size="xs">
                     {stats.completionRate}%
@@ -207,16 +210,15 @@ export default function ProfileContainer() {
               </div>
             </div>
 
-            {/* Enhanced Action Buttons */}
             <div className="flex gap-3 mt-4 md:mt-0">
               <Button variant="primary" className="gap-2">
                 <Edit3 className="h-4 w-4" />
-                Edit Profile
+                {t("editProfile")}
                 <Badge variant="warning" size="xs">
                   New
                 </Badge>
               </Button>
-              <Tooltip content="Account Settings">
+              <Tooltip content={common("settings")}>
                 <Button variant="outline" size="icon">
                   <Settings className="h-4 w-4" />
                 </Button>
@@ -226,7 +228,6 @@ export default function ProfileContainer() {
         </div>
       </Card>
 
-      {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="p-6 hover:shadow-md transition-all duration-200">
           <div className="flex items-center justify-between">
@@ -235,7 +236,7 @@ export default function ProfileContainer() {
                 <Video className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Videos Processed</p>
+                <p className="text-sm text-muted-foreground">{common("videosProcessed")}</p>
                 <p className="text-2xl font-bold">{stats.videosProcessed}</p>
               </div>
             </div>
@@ -254,7 +255,7 @@ export default function ProfileContainer() {
                 <TrendingUp className="w-6 h-6 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Projects</p>
+                <p className="text-sm text-muted-foreground">{common("totalProjects")}</p>
                 <p className="text-2xl font-bold">{stats.totalProjects}</p>
               </div>
             </div>
@@ -271,7 +272,7 @@ export default function ProfileContainer() {
                 <Activity className="w-6 h-6 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Storage Used</p>
+                <p className="text-sm text-muted-foreground">{common("storageUsed")}</p>
                 <p className="text-2xl font-bold">{stats.storageUsed}GB</p>
               </div>
             </div>
@@ -300,7 +301,7 @@ export default function ProfileContainer() {
                 <Clock className="w-6 h-6 text-info" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Account Age</p>
+                <p className="text-sm text-muted-foreground">{common("accountAge")}</p>
                 <p className="text-2xl font-bold">{stats.accountAge}d</p>
               </div>
             </div>
@@ -313,7 +314,6 @@ export default function ProfileContainer() {
         </Card>
       </div>
 
-      {/* Enhanced Tabs */}
       <Card className="p-6">
         <div className="flex border-b border-border mb-6">
           {tabs.map((tab) => (
@@ -340,13 +340,11 @@ export default function ProfileContainer() {
           ))}
         </div>
 
-        {/* Enhanced Tab Content */}
         {activeTab === "overview" && (
           <div className="space-y-6">
-            {/* Enhanced Quick Actions */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Quick Actions</h3>
+                <h3 className="text-lg font-semibold">{common("quickActions")}</h3>
                 <Badge variant="info" size="sm">
                   4 available
                 </Badge>
@@ -375,12 +373,11 @@ export default function ProfileContainer() {
               </div>
             </div>
 
-            {/* Enhanced Account Details */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Account Details</h3>
+                <h3 className="text-lg font-semibold">{common("accountDetails")}</h3>
                 <StatusBadge status="online" size="sm">
-                  All Good
+                  {t("allGood")}
                 </StatusBadge>
               </div>
               <Card className="p-6">
@@ -388,13 +385,13 @@ export default function ProfileContainer() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Mail className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">Email</span>
+                      <span className="text-sm">{common("email")}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{user.email}</span>
                       {user.email_verified && (
                         <StatusBadge status="online" size="xs">
-                          ✓ Verified
+                          {t("verified")}
                         </StatusBadge>
                       )}
                     </div>
@@ -403,7 +400,7 @@ export default function ProfileContainer() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <UserIcon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">Account Type</span>
+                      <span className="text-sm">{common("accountType")}</span>
                     </div>
                     <Badge variant={userTier.variant} size="sm">
                       {userTier.icon} {userTier.tier} User
@@ -413,22 +410,22 @@ export default function ProfileContainer() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Shield className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">Email Verified</span>
+                      <span className="text-sm">{common("emailVerified")}</span>
                     </div>
                     <StatusBadge status={user.email_verified ? "online" : "away"} size="sm">
-                      {user.email_verified ? "✓ Verified" : "⚠️ Pending"}
+                      {user.email_verified ? t("verified") : t("pending")}
                     </StatusBadge>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">Last Updated</span>
+                      <span className="text-sm">{common("lastUpdated")}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{formatDate(user.updated_at)}</span>
                       <Badge variant="outline" size="xs">
-                        Recent
+                        {t("recent")}
                       </Badge>
                     </div>
                   </div>
@@ -441,10 +438,10 @@ export default function ProfileContainer() {
         {activeTab === "settings" && (
           <div className="text-center py-12">
             <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Settings</h3>
-            <p className="text-muted-foreground mb-4">Configure your account preferences and settings</p>
+            <h3 className="text-lg font-semibold mb-2">{common("settings")}</h3>
+            <p className="text-muted-foreground mb-4">{common("configureAccountPreferences")}</p>
             <Badge variant="info" size="sm">
-              Coming Soon
+              {common("comingSoon")}
             </Badge>
           </div>
         )}
@@ -452,8 +449,8 @@ export default function ProfileContainer() {
         {activeTab === "security" && (
           <div className="text-center py-12">
             <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Security</h3>
-            <p className="text-muted-foreground mb-4">Manage your password and security settings</p>
+            <h3 className="text-lg font-semibold mb-2">{common("security")}</h3>
+            <p className="text-muted-foreground mb-4">{common("managePasswordSecurity")}</p>
             <div className="flex items-center justify-center gap-2">
               <StatusBadge status="online" size="sm">
                 Password Strong
@@ -468,8 +465,8 @@ export default function ProfileContainer() {
         {activeTab === "billing" && (
           <div className="text-center py-12">
             <Crown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Billing</h3>
-            <p className="text-muted-foreground mb-4">View your subscription and billing information</p>
+            <h3 className="text-lg font-semibold mb-2">{common("billing")}</h3>
+            <p className="text-muted-foreground mb-4">{common("viewSubscriptionBilling")}</p>
             <div className="flex items-center justify-center gap-2">
               <GradientBadge size="sm">Pro Plan Active</GradientBadge>
               <Badge variant="success" size="sm">

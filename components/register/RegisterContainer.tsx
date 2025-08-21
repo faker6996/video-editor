@@ -1,6 +1,8 @@
+"use client";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { FacebookIcon, GoogleIcon } from "@/components/icons/SocialIcons";
-import Input from "@/components/ui/Input";
+import { Form, FormInput, FormActions, FormSubmitButton } from "@/components/ui/Form";
 import { API_ROUTES } from "@/lib/constants/api-routes";
 import { HTTP_METHOD_ENUM } from "@/lib/constants/enum";
 import { callApi } from "@/lib/utils/api-client";
@@ -12,7 +14,6 @@ import Button from "../ui/Button";
 import { useToast } from "../ui/Toast";
 import { loading } from "@/lib/utils/loading";
 import { User } from "@/lib/models/user";
-import { useState } from "react";
 
 interface SsoReq {
   redirectUrl: string;
@@ -24,20 +25,6 @@ export default function RegisterContainer() {
   const locale = useLocale();
   const t = useTranslations("RegisterPage");
   const { addToast } = useToast();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: ""
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
 
   const handleRegisterWithFacebook = async () => {
     loading.show(t("social.registeringFacebook"));
@@ -71,11 +58,9 @@ export default function RegisterContainer() {
     }
   };
 
-  const handleEmailPasswordRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
+  const handleEmailPasswordRegister = async (values: { name: string; email: string; password: string; confirmPassword: string }) => {
     // Validation
-    if (formData.password !== formData.confirmPassword) {
+    if (values.password !== values.confirmPassword) {
       addToast({
         type: "error",
         message: t("errors.passwordMismatch"),
@@ -83,20 +68,12 @@ export default function RegisterContainer() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      addToast({
-        type: "error",
-        message: t("errors.passwordTooShort"),
-      });
-      return;
-    }
-
     loading.show(t("registering"));
     try {
       const registerResult = await callApi<any>(API_ROUTES.AUTH.REGISTER, HTTP_METHOD_ENUM.POST, {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
+        name: values.name,
+        email: values.email,
+        password: values.password,
       });
 
       // Fetch user data after successful registration
@@ -136,55 +113,36 @@ export default function RegisterContainer() {
 
         {/* Form */}
         <div className="rounded-lg bg-card text-card-foreground px-6 py-8 shadow sm:px-10">
-          <form className="space-y-6" onSubmit={handleEmailPasswordRegister}>
-            <Input
-              label={t("nameLabel")}
-              name="name"
-              type="text"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full rounded-md border border-border bg-input text-foreground px-3 py-2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            />
+          <Form
+            initialValues={{ name: "", email: "", password: "", confirmPassword: "" }}
+            validationSchema={{
+              name: { required: true, minLength: 2 },
+              email: { required: true, email: true },
+              password: { required: true, minLength: 6 },
+              confirmPassword: { required: true },
+            }}
+            onSubmit={handleEmailPasswordRegister}
+            className="space-y-6"
+          >
+            <FormInput name="name" type="text" label={t("nameLabel")} placeholder="Enter your full name" required />
 
-            <Input
-              label={t("emailLabel")}
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full rounded-md border border-border bg-input text-foreground px-3 py-2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            />
+            <FormInput name="email" type="email" label={t("emailLabel")} placeholder="Enter your email" required />
 
-            <Input
-              label={t("passwordLabel")}
-              type="password"
+            <FormInput
               name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full rounded-md border border-border bg-input text-foreground px-3 py-2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            />
-
-            <Input
-              label={t("confirmPasswordLabel")}
               type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
+              label={t("passwordLabel")}
+              placeholder="Enter your password"
+              description="Password must be at least 6 characters"
               required
-              className="mt-1 block w-full rounded-md border border-border bg-input text-foreground px-3 py-2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
             />
 
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full rounded-md bg-primary text-primary-foreground hover:brightness-110 font-medium shadow-sm transition"
-            >
-              {t("signUpButton")}
-            </Button>
-          </form>
+            <FormInput name="confirmPassword" type="password" label={t("confirmPasswordLabel")} placeholder="Confirm your password" required />
+
+            <FormActions className="justify-center">
+              <FormSubmitButton className="w-full">{t("signUpButton")}</FormSubmitButton>
+            </FormActions>
+          </Form>
 
           {/* Divider */}
           <div className="mt-6 flex items-center">

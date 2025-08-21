@@ -150,7 +150,7 @@ export function Sidebar({ className }: SidebarProps) {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
                 <FileText className="w-5 h-5 text-primary-foreground" />
               </div>
-              <h2 className="text-lg font-semibold text-foreground">Video Editor</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t("videoEditor")}</h2>
             </div>
           )}
           {isExpanded && (

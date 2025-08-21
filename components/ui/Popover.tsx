@@ -33,9 +33,7 @@ export const Popover: React.FC<PopoverProps> = ({
   const triggerRef = React.useRef<HTMLElement>(null);
 
   // Inject ShadCN animations
-  React.useLayoutEffect(() => {
-    useShadCNAnimations();
-  }, []);
+  useShadCNAnimations();
   
   const isOpen = open !== undefined ? open : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;

@@ -43,9 +43,7 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
   const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   // Inject ShadCN animations
-  React.useLayoutEffect(() => {
-    useShadCNAnimations();
-  }, []);
+  useShadCNAnimations();
 
   // Calculate positioning synchronously on open to avoid flicker
   const calculatePosition = React.useCallback(() => {

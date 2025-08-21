@@ -12,6 +12,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { callApi } from "@/lib/utils/api-client";
 import { API_ROUTES } from "@/lib/constants/api-routes";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { useTranslations } from "next-intl";
+import { Combobox } from "@/components/ui/Combobox";
 
 interface VideoTask {
   id: number;
@@ -30,6 +32,7 @@ export default function VideoTasksContainer() {
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const locale = useLocale();
+  const t = useTranslations("Common");
 
   // Stats calculation with enhanced progress
   const stats = {
@@ -82,28 +85,44 @@ export default function VideoTasksContainer() {
       case "completed":
         return (
           <StatusBadge status="online" size="sm">
-            Completed
+            {t("completed")}
           </StatusBadge>
         );
       case "processing":
         return (
           <StatusBadge status="away" size="sm" pulse>
-            Processing
+            {t("processing")}
           </StatusBadge>
         );
       case "failed":
         return (
           <StatusBadge status="busy" size="sm">
-            Failed
+            {t("failed")}
           </StatusBadge>
         );
       default:
         return (
           <StatusBadge status="idle" size="sm">
-            Draft
+            {t("draft")}
           </StatusBadge>
         );
     }
+  };
+
+  // Status options for Combobox
+  const statusOptions = [t("allStatus"), t("draft"), t("processing"), t("completed"), t("failed")];
+
+  const statusValues = ["all", "draft", "processing", "completed", "failed"];
+
+  const handleStatusChange = (value: string) => {
+    const index = statusOptions.indexOf(value);
+    const statusValue = index >= 0 ? statusValues[index] : "all";
+    setSelectedStatus(statusValue);
+  };
+
+  const getCurrentStatusLabel = () => {
+    const index = statusValues.indexOf(selectedStatus);
+    return index >= 0 ? statusOptions[index] : statusOptions[0];
   };
 
   // Filter tasks based on search and status
@@ -121,22 +140,26 @@ export default function VideoTasksContainer() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-            Video Projects
-            {tasks.length > 0 && <NotificationBadge count={stats.total} variant="primary"><span></span></NotificationBadge>}
+            {t("videoProjects")}
+            {tasks.length > 0 && (
+              <NotificationBadge count={stats.total} variant="primary">
+                <span></span>
+              </NotificationBadge>
+            )}
           </h1>
-          <p className="text-muted-foreground mt-1">Manage and track your video editing projects</p>
+          <p className="text-muted-foreground mt-1">{t("manageVideoProjects")}</p>
           {stats.total > 0 && (
             <div className="mt-2 flex items-center gap-2">
               <Progress value={stats.completionRate} variant="success" size="sm" className="w-32" />
               <Badge variant="outline" size="xs">
-                {Math.round(stats.completionRate)}% Complete
+                {Math.round(stats.completionRate)}% {t("complete")}
               </Badge>
             </div>
           )}
         </div>
         <Button variant="primary" className="gap-2" onClick={() => setShowCreateForm(!showCreateForm)}>
           <Plus className="w-4 h-4" />
-          New Project
+          {t("newProject")}
         </Button>
       </div>
 
@@ -149,13 +172,13 @@ export default function VideoTasksContainer() {
                 <PlayCircle className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Projects</p>
+                <p className="text-sm text-muted-foreground">{t("totalProjects")}</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
             </div>
             {stats.total > 10 && (
               <Badge variant="gradient" size="xs">
-                Pro User!
+                {t("proUser")}!
               </Badge>
             )}
           </div>
@@ -168,13 +191,13 @@ export default function VideoTasksContainer() {
                 <Clock className="w-6 h-6 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Processing</p>
+                <p className="text-sm text-muted-foreground">{t("processing")}</p>
                 <p className="text-2xl font-bold">{stats.processing}</p>
               </div>
             </div>
             {stats.processing > 0 && (
               <Badge variant="warning" size="xs" pulse>
-                Active
+                {t("active")}
               </Badge>
             )}
           </div>
@@ -187,13 +210,13 @@ export default function VideoTasksContainer() {
                 <CheckCircle className="w-6 h-6 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-sm text-muted-foreground">{t("completed")}</p>
                 <p className="text-2xl font-bold">{stats.completed}</p>
               </div>
             </div>
             {stats.completed > 0 && (
               <Badge variant="success" size="xs">
-                ✓ Done
+                ✓ {t("done")}
               </Badge>
             )}
           </div>
@@ -206,13 +229,13 @@ export default function VideoTasksContainer() {
                 <Edit className="w-6 h-6 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Draft</p>
+                <p className="text-sm text-muted-foreground">{t("draft")}</p>
                 <p className="text-2xl font-bold">{stats.draft}</p>
               </div>
             </div>
             {stats.draft > 0 && (
               <Badge variant="outline" size="xs">
-                Pending
+                {t("pending")}
               </Badge>
             )}
           </div>
@@ -223,15 +246,15 @@ export default function VideoTasksContainer() {
       {showCreateForm && (
         <Card className="p-6">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Create New Project</h3>
+            <h3 className="text-lg font-semibold">{t("createNewProject")}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input placeholder="Project title" value={title} onChange={(e) => setTitle(e.target.value)} />
-              <Input placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <Input placeholder={t("projectTitle")} value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Input placeholder={t("projectDescription")} value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
             <div className="flex gap-3">
               <Button onClick={onCreate} disabled={loading || !title.trim()} variant="primary" className="gap-2">
                 {loading ? <Clock className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                {loading ? "Creating..." : "Create Project"}
+                {loading ? t("creating") : t("createProject")}
               </Button>
               <Button
                 variant="outline"
@@ -241,7 +264,7 @@ export default function VideoTasksContainer() {
                   setDescription("");
                 }}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             </div>
           </div>
@@ -253,21 +276,20 @@ export default function VideoTasksContainer() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search projects..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+            <Input placeholder={t("searchProjects")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-            </select>
+            <div className="min-w-[150px]">
+              <Combobox
+                options={statusOptions}
+                value={getCurrentStatusLabel()}
+                onChange={handleStatusChange}
+                placeholder={t("allStatus")}
+                searchPlaceholder={t("search")}
+                emptyText={t("noProjectsFound")}
+              />
+            </div>
           </div>
         </div>
       </Card>
@@ -276,10 +298,10 @@ export default function VideoTasksContainer() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            Projects
+            {t("projects")}
             {filteredTasks.length !== tasks.length && (
               <Badge variant="info" size="sm">
-                {filteredTasks.length} of {tasks.length}
+                {filteredTasks.length} {t("of")} {tasks.length}
               </Badge>
             )}
           </h2>
@@ -304,12 +326,12 @@ export default function VideoTasksContainer() {
                       {getStatusBadge(task.status)}
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Tooltip content="Edit Project">
+                      <Tooltip content={t("editProject")}>
                         <Button variant="ghost" size="sm" className="p-2">
                           <Edit className="w-4 h-4" />
                         </Button>
                       </Tooltip>
-                      <Tooltip content="Delete Project">
+                      <Tooltip content={t("deleteProject")}>
                         <Button variant="ghost" size="sm" className="p-2 text-destructive">
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -345,7 +367,7 @@ export default function VideoTasksContainer() {
                     <Link href={`/${locale}/video-tasks/${task.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full gap-2">
                         <Eye className="w-4 h-4" />
-                        View Details
+                        {t("viewDetails")}
                       </Button>
                     </Link>
                   </div>
@@ -360,17 +382,15 @@ export default function VideoTasksContainer() {
                 <PlayCircle className="w-8 h-8 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold">No projects found</h3>
+                <h3 className="font-semibold">{t("noProjectsFound")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {searchQuery || selectedStatus !== "all"
-                    ? "Try adjusting your search or filters"
-                    : "Create your first video project to get started"}
+                  {searchQuery || selectedStatus !== "all" ? t("adjustFiltersOrSearch") : t("createFirstProject")}
                 </p>
               </div>
               {!searchQuery && selectedStatus === "all" && (
                 <Button variant="primary" className="gap-2 mt-4" onClick={() => setShowCreateForm(true)}>
                   <Plus className="w-4 h-4" />
-                  Create First Project
+                  {t("createFirstVideoProject")}
                 </Button>
               )}
             </div>
