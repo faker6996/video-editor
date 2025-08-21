@@ -166,16 +166,27 @@ export default function VideoTaskDetail() {
               load();
             }}
           >
-            {t("addVideo")}
+            {t("generateSubtitlesVi") || "Generate Subtitles (VI)"}
           </Button>
           {subtitleUrl && (
             <a href={subtitleUrl} target="_blank" rel="noopener" className="inline-flex">
               <Button variant="outline">.vtt</Button>
             </a>
           )}
-          <a href={API_ROUTES.VIDEO_TASKS.EXPORT_VI(id as string)} target="_blank" rel="noopener" className="inline-flex">
-            <Button variant="primary">Export MP4 (VI)</Button>
-          </a>
+          <Button
+            variant="primary"
+            onClick={async () => {
+              try {
+                const res: any = await callApi(API_ROUTES.VIDEO_TASKS.EXPORT_VI(id as string), "POST");
+                const sp = res?.storage_path;
+                if (sp && typeof window !== 'undefined') {
+                  window.open(`/api/uploads${sp}`, '_blank');
+                }
+              } catch (e) {}
+            }}
+          >
+            Export MP4 (VI)
+          </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Input placeholder={t("videoUrl") || "Video URL"} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} />

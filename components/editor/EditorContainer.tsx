@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Play,
   Upload,
@@ -18,17 +18,62 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { callApi } from "@/lib/utils/api-client";
 import { API_ROUTES } from "@/lib/constants/api-routes";
 import { useTranslations } from "next-intl";
+import { useLocale } from "@/lib/hooks/useLocale";
 
 export default function EditorContainer() {
   const [role, setRole] = useState<string>("standard");
   const [loading, setLoading] = useState(true);
   const t = useTranslations("Common");
+  const router = useRouter();
+  const locale = useLocale();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      // 1) Upload raw video file
+      const fd = new FormData();
+      fd.set("file", file);
+      const up: any = await callApi(API_ROUTES.UPLOAD.VIDEO, "POST", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const { storage_path, filename } = up || {};
+
+      // 2) Create a new video task (project)
+      const task: any = await callApi(API_ROUTES.VIDEO_TASKS.LIST, "POST", {
+        title: filename || "New Project",
+        description: "Uploaded via editor",
+      });
+
+      // 3) Attach uploaded video to the task
+      if (task?.id && storage_path) {
+        await callApi(API_ROUTES.VIDEO_TASKS.VIDEOS(task.id), "POST", {
+          storage_path,
+          filename,
+        });
+        // 4) Navigate to task detail to continue editing
+        router.push(`/${locale}/video-tasks/${task.id}`);
+      }
+    } catch (err: any) {
+      // callApi already alerts on failure; keep this minimal
+      console.error("Upload failed:", err);
+    } finally {
+      // Reset input so the same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     callApi<{ role: string }>(API_ROUTES.ME.ROLE, "GET", undefined, { silent: true })
@@ -246,7 +291,8 @@ export default function EditorContainer() {
             <p className="text-muted-foreground max-w-md mx-auto">{t("videoEditingInterface")}</p>
           </div>
           <div className="flex gap-3 justify-center">
-            <Button variant="primary" className="gap-2">
+            <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelected} />
+            <Button variant="primary" className="gap-2" onClick={handleUploadClick}>
               <Upload className="w-4 h-4" />
               {t("uploadVideo")}
             </Button>

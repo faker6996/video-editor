@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 import { videoTaskRepo } from "@/lib/modules/video_task/repositories/video_task_repo";
 import { baseRepo } from "@/lib/modules/common/base_repo";
 import { SubtitleTrack, VideoEditSettings } from "@/lib/models";
@@ -9,26 +10,84 @@ import { safeQuery } from "@/lib/modules/common/safe_query";
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
 async function callOpenAITranscribe(urlOrPath: string): Promise<{segments: TranscriptSegment[]; language?: string}> {
-  // Placeholder. Integrate with OpenAI Whisper API based on env config.
   const apiKey = process.env.OPENAI_API_KEY;
   const apiBase = process.env.OPENAI_API_BASE || 'https://api.openai.com/v1';
   const model = process.env.OPENAI_TRANSCRIBE_MODEL || 'whisper-1';
 
+  // If no API key, return fallback demo segments to keep dev flow working
   if (!apiKey) {
-    // Fallback demo segments (10s)
-    return { segments: [
-      { start: 0, end: 2.5, text: 'Xin chào, đây là phụ đề mẫu.' },
-      { start: 2.6, end: 6.0, text: 'Tính năng phụ đề tiếng Việt đang hoạt động.' },
-      { start: 6.1, end: 10.0, text: 'Bạn có thể tải xuống file phụ đề.' },
-    ], language: 'vi' };
+    return {
+      segments: [
+        { start: 0, end: 2.5, text: 'Xin chào, đây là phụ đề mẫu.' },
+        { start: 2.6, end: 6.0, text: 'Tính năng phụ đề tiếng Việt đang hoạt động.' },
+        { start: 6.1, end: 10.0, text: 'Bạn có thể tải xuống file phụ đề.' },
+      ],
+      language: 'vi',
+    };
   }
 
-  // TODO: Implement actual API call
-  // For now, return placeholder to avoid runtime network in dev
-  return { segments: [
-    { start: 0, end: 3, text: 'Phụ đề tiếng Việt (demo).' },
-    { start: 3, end: 6, text: 'Hãy cấu hình OPENAI_API_KEY trong .env.local.' },
-  ], language: 'vi' };
+  // Only support local file paths (we store to disk after upload)
+  const absPath = urlOrPath.startsWith('/') || urlOrPath.startsWith('./') || urlOrPath.includes('uploads')
+    ? urlOrPath
+    : path.join(process.env.UPLOAD_DIR || './uploads', urlOrPath);
+  if (!fs.existsSync(absPath)) {
+    throw new Error('Audio/video file not found for transcription');
+  }
+
+  // Build multipart form for OpenAI audio transcription
+  const form = new FormData();
+  // @ts-ignore - filename is supported by undici FormData
+  form.append('file', fs.createReadStream(absPath), path.basename(absPath));
+  form.append('model', model);
+  form.append('response_format', 'verbose_json');
+
+  const res = await fetch(`${apiBase}/audio/transcriptions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form as any,
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    throw new Error(`OpenAI transcribe failed: ${res.status} ${errTxt}`);
+  }
+  const data: any = await res.json();
+  const segments: TranscriptSegment[] = (data.segments || []).map((s: any) => ({ start: s.start, end: s.end, text: s.text }));
+  const language: string | undefined = data.language;
+
+  // Optional: translate to Vietnamese using an LLM if configured
+  const translateModel = process.env.OPENAI_TRANSLATE_MODEL; // e.g., 'gpt-4o-mini'
+  if (translateModel && language && language !== 'vi' && segments.length) {
+    // Pack texts into a single JSON for efficient translation preserving segmentation
+    const texts = segments.map((s) => s.text);
+    const prompt = `Translate the following array of transcript segments to Vietnamese. Keep array length and order. Return JSON array of strings only.\n\n${JSON.stringify(texts)}`;
+    const resp = await fetch(`${apiBase}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: translateModel,
+        messages: [
+          { role: 'system', content: 'You are a precise subtitle translator.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.2,
+      }),
+    });
+    if (resp.ok) {
+      const out: any = await resp.json();
+      const content = out.choices?.[0]?.message?.content;
+      try {
+        const arr = JSON.parse(content);
+        if (Array.isArray(arr) && arr.length === segments.length) {
+          for (let i = 0; i < segments.length; i++) segments[i].text = arr[i];
+        }
+      } catch {}
+    }
+  }
+
+  return { segments, language };
 }
 
 async function ensureDir(p: string) {
