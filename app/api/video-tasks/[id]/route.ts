@@ -4,15 +4,18 @@ import { createResponse } from "@/lib/utils/response";
 import { getUserFromRequest } from "@/lib/utils/auth-helper";
 import { videoTaskRepo } from "@/lib/modules/video_task/repositories/video_task_repo";
 
-function getTaskId(context?: any): number {
-  const id = context?.params?.id;
-  return Number(id);
+async function getTaskId(context?: any): Promise<number> {
+  if (context?.params) {
+    const params = await context.params;
+    return Number(params?.id);
+  }
+  return NaN;
 }
 
 async function getHandler(req: NextRequest, context?: any) {
   const user = await getUserFromRequest(req);
   if (!user?.id) return createResponse(null, "Unauthorized", 401);
-  const taskId = getTaskId(context);
+  const taskId = await getTaskId(context);
   const task = await videoTaskRepo.getTaskById(taskId);
   if (!task || task.user_id !== user.id) return createResponse(null, "Not found", 404);
   return createResponse(task, "OK");
@@ -21,7 +24,7 @@ async function getHandler(req: NextRequest, context?: any) {
 async function putHandler(req: NextRequest, context?: any) {
   const user = await getUserFromRequest(req);
   if (!user?.id) return createResponse(null, "Unauthorized", 401);
-  const taskId = getTaskId(context);
+  const taskId = await getTaskId(context);
   const existing = await videoTaskRepo.getTaskById(taskId);
   if (!existing || existing.user_id !== user.id) return createResponse(null, "Not found", 404);
   const body = await req.json();
@@ -32,4 +35,3 @@ async function putHandler(req: NextRequest, context?: any) {
 
 export const GET = withApiHandler(getHandler);
 export const PUT = withApiHandler(putHandler);
-

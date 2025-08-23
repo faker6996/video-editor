@@ -11,13 +11,21 @@ interface Props {
 export default function VideoPlayer({ src, subtitleUrl, language = 'vi' }: Props) {
   return (
     <div className="w-full flex justify-center">
+      <style jsx>{`
+        .video-player-small-subs::cue {
+          font-size: 14px !important;
+          line-height: 1.2 !important;
+          background-color: rgba(0, 0, 0, 0.8) !important;
+          padding: 2px 6px !important;
+        }
+      `}</style>
       <div className="w-full max-w-3xl">
         <div className="rounded-lg border bg-muted overflow-hidden">
           {/* 16:9 responsive container */}
           <div className="relative w-full pt-[56.25%]">
             <video
               controls
-              className="absolute inset-0 h-full w-full object-contain bg-black"
+              className="absolute inset-0 h-full w-full object-contain bg-black video-player-small-subs"
               crossOrigin="anonymous"
             >
               <source src={src} type="video/mp4" />

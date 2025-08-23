@@ -35,7 +35,11 @@ export const API_ROUTES = {
     DETAIL: (id: number | string) => `/api/video-tasks/${id}`,
     VIDEOS: (id: number | string) => `/api/video-tasks/${id}/videos`,
     SUBTITLES_VI: (id: number | string) => `/api/video-tasks/${id}/subtitles/vi`,
+    TTS_VI: (id: number | string) => `/api/video-tasks/${id}/tts`,
     EXPORT_VI: (id: number | string) => `/api/video-tasks/${id}/export/vi`,
+    // New: Video-specific subtitle routes
+    VIDEO_SUBTITLES: (taskId: number | string, videoId: number | string) => `/api/video-tasks/${taskId}/videos/${videoId}/subtitles`,
+    ALL_SUBTITLES: (id: number | string) => `/api/video-tasks/${id}/all-subtitles`,
   },
   VIDEOS: {
     ITEM: (id: number | string) => `/api/videos/${id}`,

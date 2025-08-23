@@ -42,14 +42,18 @@ export default function EditorContainer() {
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    console.log('🎬 Editor: File selected for upload:', file.name);
     try {
       // 1) Upload raw video file
       const fd = new FormData();
       fd.set("file", file);
+      console.log('📡 Editor: Uploading to', API_ROUTES.UPLOAD.VIDEO);
       const up: any = await callApi(API_ROUTES.UPLOAD.VIDEO, "POST", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       const { storage_path, filename } = up || {};
+      console.log('✅ Editor: Upload response:', up);
+      console.log('📁 Editor: Extracted paths:', { storage_path, filename });
 
       // 2) Create a new video task (project)
       const task: any = await callApi(API_ROUTES.VIDEO_TASKS.LIST, "POST", {

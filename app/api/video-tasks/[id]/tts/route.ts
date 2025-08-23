@@ -4,7 +4,7 @@ import { createResponse } from "@/lib/utils/response";
 import { getUserFromRequest } from "@/lib/utils/auth-helper";
 import { subtitleApp } from "@/lib/modules/video_processing/applications/subtitle_app";
 
-// Increase timeout for subtitle generation
+// Increase timeout for TTS generation
 export const maxDuration = 60; // 60 seconds
 
 async function postHandler(req: NextRequest, { params }: any) {
@@ -15,17 +15,17 @@ async function postHandler(req: NextRequest, { params }: any) {
   if (!id || Number.isNaN(id)) return createResponse(null, "Invalid task id", 400);
 
   try {
-    console.log(`🎬 Starting subtitle generation for task ${id}...`);
+    console.log(`🎙️ Starting TTS generation for task ${id}...`);
     const startTime = Date.now();
 
-    const { vtt_path } = await subtitleApp.generateVietnameseSubtitle(id);
+    const { audio_path } = await subtitleApp.generateVietnameseTTS(id);
 
     const duration = (Date.now() - startTime) / 1000;
-    console.log(`✅ Subtitle generation completed for task ${id} in ${duration.toFixed(2)}s`);
+    console.log(`✅ TTS generation completed for task ${id} in ${duration.toFixed(2)}s`);
 
-    return createResponse({ storage_path: vtt_path }, "Generated");
+    return createResponse({ audio_path }, "TTS Generated");
   } catch (e: any) {
-    console.error(`❌ Subtitle generation failed for task ${id}:`, e?.message);
+    console.error(`❌ TTS generation failed for task ${id}:`, e?.message);
     return createResponse({ error: e?.message || "Failed" }, "Failed", 500, false);
   }
 }

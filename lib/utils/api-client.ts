@@ -4,7 +4,7 @@ import { API_ROUTES } from "@/lib/constants/api-routes";
 
 const api = axios.create({
   baseURL: "", // process.env.NEXT_PUBLIC_API_URL (nếu có)
-  timeout: 10_000,
+  timeout: 120_000, // Increase to 2 minutes for video processing
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
@@ -103,7 +103,7 @@ export async function callApi<T>(
               ...(method === "GET" ? { params: data } : { data }),
               ...cleanConfig,
               withCredentials: true,
-              headers: { ...(config?.headers || {}), "Content-Type": config?.headers?.["Content-Type"] || "application/json" }
+              headers: { ...(config?.headers || {}), "Content-Type": config?.headers?.["Content-Type"] || "application/json" },
             });
             const { success: ok, data: payload, message } = retryRes.data || {};
             if (!ok) throw new Error(message || "Request failed");
