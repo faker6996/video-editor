@@ -1,23 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { cn } from "@/lib/utils/cn";
 import Avatar from "@/components/ui/Avatar";
-import DropdownMenu from "@/components/ui/DropdownMenu";
 import Button from "@/components/ui/Button";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { Home, FolderOpen, Eye, ChevronLeft, FileText, User as UserIcon, Settings, LogOut } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTranslations } from "next-intl";
-import { useLocale } from "@/lib/hooks/useLocale";
-import { useRouter } from "next/navigation";
+import DropdownMenu from "@/components/ui/DropdownMenu";
 import { useToast } from "@/components/ui/Toast";
-import { callApi } from "@/lib/utils/api-client";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 import { API_ROUTES } from "@/lib/constants/api-routes";
 import { HTTP_METHOD_ENUM } from "@/lib/constants/enum";
+import { useLocale } from "@/lib/hooks/useLocale";
+import { callApi } from "@/lib/utils/api-client";
+import { cn } from "@/lib/utils/cn";
 import { loading } from "@/lib/utils/loading";
+import { ChevronLeft, CreditCard, Crown, Eye, FileText, Home, LogOut, PlayCircle, Settings, User as UserIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface MenuItem {
   id: string;
@@ -56,19 +55,19 @@ export function Sidebar({ className }: SidebarProps) {
     {
       id: "video-tasks",
       label: (t as any)("videoTasks") || "Video Tasks",
-      icon: FolderOpen,
+      icon: PlayCircle, // Thay đổi từ FolderOpen thành PlayCircle
       path: `/${locale}/video-tasks`,
     },
     {
       id: "plans",
       label: (t as any)("plans") || "Plans",
-      icon: FolderOpen,
+      icon: Crown, // Thay đổi từ FolderOpen thành Crown
       path: `/${locale}/plans`,
     },
     {
       id: "subscription",
       label: (t as any)("subscription") || "Subscription",
-      icon: FolderOpen,
+      icon: CreditCard, // Thay đổi từ FolderOpen thành CreditCard
       path: `/${locale}/subscription`,
     },
   ];

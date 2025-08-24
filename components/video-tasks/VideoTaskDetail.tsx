@@ -12,6 +12,11 @@ import { API_ROUTES } from "@/lib/constants/api-routes";
 import { Combobox } from "@/components/ui/Combobox";
 import { Checkbox } from "@/components/ui/CheckBox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
+import { FONT_OPTIONS } from "@/lib/constants/subtitle-styles";
+import Card from "@/components/ui/Card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
+import { Download, Play, HardDrive } from "lucide-react";
+import VideoUpload from "@/components/ui/VideoUpload";
 
 interface Video {
   id: number;
@@ -51,6 +56,55 @@ export default function VideoTaskDetail() {
   const [ttsVoice, setTtsVoice] = useState<string>("alloy");
   const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | undefined>(undefined);
   const [autoSpeed, setAutoSpeed] = useState<number>(1.0);
+  const [previousExports, setPreviousExports] = useState<any[]>([]);
+  const [subtitleFont, setSubtitleFont] = useState<string>("Arial");
+
+  // State for drag and drop
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!loading) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (loading) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const videoFile = files.find((file) => file.type.startsWith("video/"));
+
+    if (videoFile) {
+      // Simulate file input selection
+      const dt = new DataTransfer();
+      dt.items.add(videoFile);
+      if (fileInputRef.current) {
+        fileInputRef.current.files = dt.files;
+        // Trigger change event
+        const event = new Event("change", { bubbles: true });
+        fileInputRef.current.dispatchEvent(event);
+      }
+    }
+  };
+
+  // File selection handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    console.log("📁 File selected:", file?.name);
+    if (file) {
+      handleFileUpload();
+    }
+  };
 
   const load = () => {
     // Load videos
@@ -86,19 +140,28 @@ export default function VideoTaskDetail() {
       .then((res: any) => {
         const subs = res?.videos || [];
         setAllSubtitles(subs);
-        
+
         // Calculate optimal TTS speed based on subtitle timing
         if (subs && subs.length > 0) {
-          calculateOptimalTTSSpeed(subs).then(optimalSpeed => {
-            console.log(`🎯 Calculated optimal TTS speed: ${optimalSpeed}x`);
-            setAutoSpeed(optimalSpeed);
-          }).catch(error => {
-            console.error('❌ Failed to calculate TTS speed:', error);
-            setAutoSpeed(1.3); // Default faster speed
-          });
+          calculateOptimalTTSSpeed(subs)
+            .then((optimalSpeed) => {
+              console.log(`🎯 Calculated optimal TTS speed: ${optimalSpeed}x`);
+              setAutoSpeed(optimalSpeed);
+            })
+            .catch((error) => {
+              console.error("❌ Failed to calculate TTS speed:", error);
+              setAutoSpeed(1.3); // Default faster speed
+            });
         }
       })
       .catch(() => setAllSubtitles([]));
+
+    // Load previous exports
+    callApi(API_ROUTES.VIDEO_TASKS.EXPORTS(id as string), "GET", undefined, { silent: true })
+      .then((res: any) => {
+        setPreviousExports(res || []);
+      })
+      .catch(() => setPreviousExports([]));
   };
 
   useEffect(() => {
@@ -172,116 +235,116 @@ export default function VideoTaskDetail() {
   // Calculate optimal TTS speed based on actual subtitle timing from VTT content
   const calculateOptimalTTSSpeed = async (subtitleVideos: any[]): Promise<number> => {
     if (!subtitleVideos || subtitleVideos.length === 0) return 1.2; // Default faster speed
-    
+
     // Find Vietnamese subtitles
-    const viSubtitles = subtitleVideos.flatMap((video: any) => 
-      video.subtitles?.filter((sub: any) => sub.language_code === "vi") || []
-    );
-    
+    const viSubtitles = subtitleVideos.flatMap((video: any) => video.subtitles?.filter((sub: any) => sub.language_code === "vi") || []);
+
     if (viSubtitles.length === 0) return 1.2;
-    
+
     try {
       // Get the first Vietnamese subtitle file to analyze
       const firstSubtitle = viSubtitles[0];
       if (!firstSubtitle?.url) return 1.2;
-      
+
       console.log(`🔍 Fetching VTT content from: ${firstSubtitle.url}`);
-      
+
       // Fetch VTT content
       const response = await fetch(firstSubtitle.url);
       const vttContent = await response.text();
-      
+
       // Parse VTT to extract timing and word count
-      const lines = vttContent.split('\n');
+      const lines = vttContent.split("\n");
       let totalWords = 0;
       let totalDurationMs = 0;
       let cueCount = 0;
-      
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        
+
         // Look for timestamp lines (format: "00:00.000 --> 00:05.000")
-        if (line.includes('-->')) {
-          const [start, end] = line.split('-->').map(s => s.trim());
-          
+        if (line.includes("-->")) {
+          const [start, end] = line.split("-->").map((s) => s.trim());
+
           // Parse timestamps to milliseconds
           const startMs = parseTimestamp(start);
           const endMs = parseTimestamp(end);
           const durationMs = endMs - startMs;
-          
+
           // Get the text content (next non-empty line)
-          let textLine = '';
-          for (let j = i + 1; j < lines.length && !lines[j].includes('-->'); j++) {
+          let textLine = "";
+          for (let j = i + 1; j < lines.length && !lines[j].includes("-->"); j++) {
             const nextLine = lines[j].trim();
-            if (nextLine && !nextLine.match(/^\d+$/)) { // Skip cue numbers
-              textLine += nextLine + ' ';
+            if (nextLine && !nextLine.match(/^\d+$/)) {
+              // Skip cue numbers
+              textLine += nextLine + " ";
             }
           }
-          
+
           if (textLine.trim()) {
             // Count words more accurately for Vietnamese
-            const cleanText = textLine.replace(/<[^>]*>/g, '').trim(); // Remove HTML tags
-            const words = cleanText.split(/\s+/).filter(word => word.length > 0).length;
-            
+            const cleanText = textLine.replace(/<[^>]*>/g, "").trim(); // Remove HTML tags
+            const words = cleanText.split(/\s+/).filter((word) => word.length > 0).length;
+
             // Vietnamese speakers tend to speak faster than English, adjust word count
             const adjustedWords = Math.ceil(words * 1.1); // Slight adjustment for Vietnamese
-            
+
             totalWords += adjustedWords;
             totalDurationMs += durationMs;
             cueCount++;
-            
+
             // Debug log for first few cues
             if (cueCount <= 3) {
-              console.log(`📝 Cue ${cueCount}: "${cleanText.substring(0, 50)}..." (${words} words, ${(durationMs/1000).toFixed(1)}s)`);
+              console.log(`📝 Cue ${cueCount}: "${cleanText.substring(0, 50)}..." (${words} words, ${(durationMs / 1000).toFixed(1)}s)`);
             }
           }
         }
       }
-      
+
       if (totalDurationMs > 0 && totalWords > 0) {
         // Calculate words per minute from actual subtitle timing
         const actualWPM = (totalWords / (totalDurationMs / 1000)) * 60;
-        console.log(`📊 Analyzed ${cueCount} subtitle cues: ${totalWords} words in ${(totalDurationMs/1000).toFixed(1)}s = ${actualWPM.toFixed(1)} WPM`);
-        
+        console.log(
+          `📊 Analyzed ${cueCount} subtitle cues: ${totalWords} words in ${(totalDurationMs / 1000).toFixed(1)}s = ${actualWPM.toFixed(1)} WPM`
+        );
+
         // Target TTS speed: aim for faster than original to match natural speech
         // TTS tends to be slower than human speech, so we need significant speed boost
         const targetWPM = Math.min(actualWPM * 1.3, 200); // 30% faster, max 200 WPM
         const normalTTSWPM = 140; // OpenAI TTS actual default (slower than claimed 150)
         const optimalSpeed = Math.max(0.8, Math.min(1.5, targetWPM / normalTTSWPM));
-        
+
         console.log(`🎯 Calculated optimal TTS speed: ${optimalSpeed.toFixed(1)}x (target: ${targetWPM.toFixed(1)} WPM)`);
         return Math.round(optimalSpeed * 10) / 10;
       }
-      
     } catch (error) {
-      console.error('❌ Error analyzing subtitle timing:', error);
+      console.error("❌ Error analyzing subtitle timing:", error);
     }
-    
+
     return 1.3; // Default faster speed if analysis fails
   };
-  
+
   // Helper function to parse VTT timestamp to milliseconds
   const parseTimestamp = (timestamp: string): number => {
     // Clean timestamp and handle different formats
     const cleanTimestamp = timestamp.trim();
-    
+
     // Format: "00:00.000", "00:00:00.000", or "00:00:00,000"
-    const parts = cleanTimestamp.replace(',', '.').split(':');
-    
+    const parts = cleanTimestamp.replace(",", ".").split(":");
+
     if (parts.length === 2) {
       // mm:ss.sss format
       const [minutes, seconds] = parts;
-      const [sec, ms] = seconds.split('.');
-      const msInt = ms ? parseInt(ms.padEnd(3, '0').substring(0, 3)) : 0;
+      const [sec, ms] = seconds.split(".");
+      const msInt = ms ? parseInt(ms.padEnd(3, "0").substring(0, 3)) : 0;
       return parseInt(minutes) * 60000 + parseInt(sec) * 1000 + msInt;
     } else if (parts.length === 3) {
-      // hh:mm:ss.sss format  
+      // hh:mm:ss.sss format
       const [hours, minutes, seconds] = parts;
-      const [sec, ms] = seconds.split('.');
-      const msInt = ms ? parseInt(ms.padEnd(3, '0').substring(0, 3)) : 0;
+      const [sec, ms] = seconds.split(".");
+      const msInt = ms ? parseInt(ms.padEnd(3, "0").substring(0, 3)) : 0;
       return parseInt(hours) * 3600000 + parseInt(minutes) * 60000 + parseInt(sec) * 1000 + msInt;
     }
-    
+
     return 0;
   };
 
@@ -328,7 +391,7 @@ export default function VideoTaskDetail() {
       <h1 className="text-2xl font-semibold">Task #{id}</h1>
 
       {/* Task Meta */}
-      <div className="rounded-lg border p-5 bg-card space-y-3">
+      <Card className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Input
             placeholder={t("taskTitle") || "Title"}
@@ -367,157 +430,212 @@ export default function VideoTaskDetail() {
             {saving ? t("processing") : t("confirm")}
           </Button>
         </div>
-      </div>
+      </Card>
 
-      {/* Original Video with Subtitle */}
-      <div className="rounded-lg border p-5 bg-card space-y-3">
-        <h3 className="text-lg font-semibold">📹 {t("originalVideoWithSubtitle")}</h3>
-        {videoUrl && <VideoPlayer src={videoUrl} subtitleUrl={subtitleUrl} language="vi" />}
-      </div>
+      {/* Video with Export Options - Single Card */}
 
-      {/* Export Options & Controls */}
-      <div className="rounded-lg border p-5 bg-card space-y-4">
-        <h3 className="text-lg font-semibold">🎬 {t("exportOptions")}</h3>
-
-        {/* Export Options */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-          <div className="space-y-2">
-            <Checkbox
-              label={<span className="text-sm font-medium">{t("includeSubtitle")}</span>}
-              checked={includeSubtitle}
-              onChange={(e) => setIncludeSubtitle(e.target.checked)}
-            />
-            {includeSubtitle && (
-              <div className="ml-6">
-                <RadioGroup value={subtitleStyle} onValueChange={(value) => setSubtitleStyle(value as "normal" | "karaoke")} size="sm">
-                  <RadioGroupItem value="normal" label={t("subtitleStyleNormal")} />
-                  <RadioGroupItem value="karaoke" label={t("subtitleStyleKaraoke")} />
-                </RadioGroup>
-              </div>
-            )}
+      <Card className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Left: Video Player (3/5 width) */}
+          <div className="lg:col-span-3 space-y-3">
+            <h3 className="text-lg font-semibold">📹 {t("originalVideoWithSubtitle")}</h3>
+            {videoUrl && <VideoPlayer src={videoUrl} subtitleUrl={subtitleUrl} language="vi" />}
           </div>
 
-          <div className="space-y-2">
-            <Checkbox
-              label={<span className="text-sm font-medium">{t("includeTTSNarration")}</span>}
-              checked={includeTTS}
-              onChange={(e) => setIncludeTTS(e.target.checked)}
-            />
-            <p className="text-xs text-muted-foreground ml-6">{t("aiVoiceoverVietnamese")}</p>
+          {/* Right: Export Options (2/5 width) */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-lg font-semibold">🎬 {t("exportOptions")}</h3>
 
-            {/* TTS Advanced Options - only show when TTS is enabled */}
-            {includeTTS && (
-              <div className="ml-6 space-y-2">
+            {/* Export Options */}
+            <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-3">
                 <Checkbox
-                  label={<span className="text-sm">{t("muteOriginalAudio")}</span>}
-                  checked={muteOriginalAudio}
-                  onChange={(e) => setMuteOriginalAudio(e.target.checked)}
+                  label={<span className="text-sm font-medium">{t("includeSubtitle")}</span>}
+                  checked={includeSubtitle}
+                  onChange={(e) => setIncludeSubtitle(e.target.checked)}
                 />
-                
-                {/* Voice Selection */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{t("ttsVoice")}</label>
-                  <div className="flex gap-2">
-                    <select 
-                      value={ttsVoice} 
-                      onChange={(e) => {
-                        setTtsVoice(e.target.value);
-                        setVoicePreviewUrl(undefined); // Clear preview when voice changes
-                      }}
-                      className="flex-1 text-xs border rounded px-2 py-1 bg-background"
-                    >
-                      <option value="alloy">Alloy (Nữ, Trung tính)</option>
-                      <option value="echo">Echo (Nam, Rõ ràng)</option>
-                      <option value="fable">Fable (Nam, Ấm áp)</option>
-                      <option value="onyx">Onyx (Nam, Trầm)</option>
-                      <option value="nova">Nova (Nữ, Tươi sáng)</option>
-                      <option value="shimmer">Shimmer (Nữ, Nhẹ nhàng)</option>
-                    </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        // Use on-demand voice sample generation via API
-                        const sampleUrl = `/api/samples/voices/${ttsVoice}`;
-                        setVoicePreviewUrl(sampleUrl);
-                        console.log(`🎵 Loading voice sample: ${ttsVoice}`);
-                      }}
-                      className="text-xs px-2"
-                    >
-                      {t("previewVoice")}
-                    </Button>
-                  </div>
-                  
-                  {/* Preview Audio Player */}
-                  {voicePreviewUrl && (
-                    <div className="mt-2">
-                      <audio controls className="w-full" style={{ height: '32px' }}>
-                        <source src={voicePreviewUrl} type="audio/mpeg" />
-                      </audio>
+                {includeSubtitle && (
+                  <div className="ml-6 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-2 block">Kiểu subtitle:</label>
+                      <RadioGroup value={subtitleStyle} onValueChange={(value) => setSubtitleStyle(value as "normal" | "karaoke")} size="sm">
+                        <RadioGroupItem value="normal" label={t("subtitleStyleNormal")} />
+                        <RadioGroupItem value="karaoke" label={t("subtitleStyleKaraoke")} />
+                      </RadioGroup>
                     </div>
-                  )}
-                </div>
-                
-              </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <div className="text-sm font-medium">{t("exportPreview")}</div>
-            <div className="text-xs text-muted-foreground">
-              {!includeSubtitle && !includeTTS && t("originalVideoOnly")}
-              {includeSubtitle && !includeTTS && t("videoWithSubtitle", { style: subtitleStyle })}
-              {!includeSubtitle && includeTTS && t("videoWithTTS")}
-              {includeSubtitle && includeTTS && t("videoWithTTSAndSubtitle", { style: subtitleStyle })}
+                    {/* Font Selection */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-2 block">Font chữ:</label>
+                      <Combobox
+                        options={FONT_OPTIONS.map((font) => font.label)}
+                        value={FONT_OPTIONS.find((f) => f.value === subtitleFont)?.label || "Arial"}
+                        onChange={(selectedLabel) => {
+                          const selectedFont = FONT_OPTIONS.find((f) => f.label === selectedLabel);
+                          setSubtitleFont(selectedFont?.value || "Arial");
+                        }}
+                        size="sm"
+                        placeholder="Chọn font..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Checkbox
+                  label={<span className="text-sm font-medium">{t("includeTTSNarration")}</span>}
+                  checked={includeTTS}
+                  onChange={(e) => setIncludeTTS(e.target.checked)}
+                />
+                <p className="text-xs text-muted-foreground ml-6">{t("aiVoiceoverVietnamese")}</p>
+
+                {/* TTS Advanced Options - only show when TTS is enabled */}
+                {includeTTS && (
+                  <div className="ml-6 space-y-2">
+                    <Checkbox
+                      label={<span className="text-sm">{t("muteOriginalAudio")}</span>}
+                      checked={muteOriginalAudio}
+                      onChange={(e) => setMuteOriginalAudio(e.target.checked)}
+                    />
+
+                    {/* Voice Selection */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">{t("ttsVoice")}</label>
+                      <div className="flex gap-2">
+                        <Combobox
+                          options={[
+                            "Alloy (Nữ, Trung tính)",
+                            "Echo (Nam, Rõ ràng)",
+                            "Fable (Nam, Ấm áp)",
+                            "Onyx (Nam, Trầm)",
+                            "Nova (Nữ, Tươi sáng)",
+                            "Shimmer (Nữ, Nhẹ nhàng)",
+                          ]}
+                          value={(() => {
+                            const voiceLabels: Record<string, string> = {
+                              alloy: "Alloy (Nữ, Trung tính)",
+                              echo: "Echo (Nam, Rõ ràng)",
+                              fable: "Fable (Nam, Ấm áp)",
+                              onyx: "Onyx (Nam, Trầm)",
+                              nova: "Nova (Nữ, Tươi sáng)",
+                              shimmer: "Shimmer (Nữ, Nhẹ nhàng)",
+                            };
+                            return voiceLabels[ttsVoice] || voiceLabels["alloy"];
+                          })()}
+                          onChange={(selectedLabel) => {
+                            const labelToVoice: Record<string, string> = {
+                              "Alloy (Nữ, Trung tính)": "alloy",
+                              "Echo (Nam, Rõ ràng)": "echo",
+                              "Fable (Nam, Ấm áp)": "fable",
+                              "Onyx (Nam, Trầm)": "onyx",
+                              "Nova (Nữ, Tươi sáng)": "nova",
+                              "Shimmer (Nữ, Nhẹ nhàng)": "shimmer",
+                            };
+                            setTtsVoice(labelToVoice[selectedLabel] || "alloy");
+                            setVoicePreviewUrl(undefined); // Clear preview when voice changes
+                          }}
+                          size="sm"
+                          className="flex-1"
+                          placeholder="Chọn giọng đọc..."
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            // Use on-demand voice sample generation via API
+                            const sampleUrl = `/api/samples/voices/${ttsVoice}`;
+                            setVoicePreviewUrl(sampleUrl);
+                            console.log(`🎵 Loading voice sample: ${ttsVoice}`);
+                          }}
+                          className="text-xs px-2"
+                        >
+                          {t("previewVoice")}
+                        </Button>
+                      </div>
+
+                      {/* Preview Audio Player */}
+                      {voicePreviewUrl && (
+                        <div className="mt-2">
+                          <audio controls className="w-full" style={{ height: "32px" }}>
+                            <source src={voicePreviewUrl} type="audio/mpeg" />
+                          </audio>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-medium">{t("exportPreview")}</div>
+                <div className="text-xs text-muted-foreground">
+                  {!includeSubtitle && !includeTTS && t("originalVideoOnly")}
+                  {includeSubtitle && !includeTTS && t("videoWithSubtitle", { style: subtitleStyle })}
+                  {!includeSubtitle && includeTTS && t("videoWithTTS")}
+                  {includeSubtitle && includeTTS && t("videoWithTTSAndSubtitle", { style: subtitleStyle })}
+                </div>
+              </div>
+
+              {/* Export Button */}
+              <Button
+                variant="primary"
+                size="lg"
+                disabled={exportLoading}
+                onClick={async () => {
+                  if (!id) return;
+                  setExportLoading(true);
+                  try {
+                    console.log(`🎬 Starting video export with options:`, {
+                      includeSubtitle,
+                      includeTTS,
+                      subtitleStyle,
+                      muteOriginalAudio,
+                      ttsVoice,
+                      autoSpeed,
+                      subtitleFont,
+                    });
+                    const res: any = await callApi(API_ROUTES.VIDEO_TASKS.EXPORT_VI(id as string), "POST", {
+                      includeSubtitle,
+                      includeTTS,
+                      subtitleStyle,
+                      muteOriginalAudio,
+                      ttsVoice,
+                      ttsSpeed: autoSpeed,
+                      subtitleFont,
+                    });
+                    const sp = res?.storage_path;
+                    if (sp) {
+                      // Add timestamp to force browser cache refresh
+                      const timestamp = Date.now();
+                      const exportUrl = `${sp}?t=${timestamp}`;
+                      setExportedVideoUrl(exportUrl);
+                      console.log("✅ Video export completed successfully");
+
+                      // Refresh previous exports list
+                      load();
+                    }
+                  } catch (error) {
+                    console.error("❌ Video export failed:", error);
+                  } finally {
+                    setExportLoading(false);
+                  }
+                }}
+              >
+                {exportLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                    {t("exportingVideo")} (120s)
+                  </>
+                ) : (
+                  t("exportVideoWithOptions")
+                )}
+              </Button>
             </div>
           </div>
         </div>
-
-        {/* Export Button */}
-        <Button
-          variant="primary"
-          size="lg"
-          disabled={exportLoading}
-          onClick={async () => {
-            if (!id) return;
-            setExportLoading(true);
-            try {
-              console.log(`🎬 Starting video export with options:`, { includeSubtitle, includeTTS, subtitleStyle, muteOriginalAudio, ttsVoice, autoSpeed });
-              const res: any = await callApi(API_ROUTES.VIDEO_TASKS.EXPORT_VI(id as string), "POST", {
-                includeSubtitle,
-                includeTTS,
-                subtitleStyle,
-                muteOriginalAudio,
-                ttsVoice,
-                ttsSpeed: autoSpeed,
-              });
-              const sp = res?.storage_path;
-              if (sp) {
-                const exportUrl = sp; // Direct static serve from public
-                setExportedVideoUrl(exportUrl);
-                console.log("✅ Video export completed successfully");
-              }
-            } catch (error) {
-              console.error("❌ Video export failed:", error);
-            } finally {
-              setExportLoading(false);
-            }
-          }}
-        >
-          {exportLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {t("exportingVideo")} (120s)
-            </>
-          ) : (
-            t("exportVideoWithOptions")
-          )}
-        </Button>
-      </div>
+      </Card>
 
       {/* Exported Video Display */}
-      <div className="rounded-lg border p-5 bg-card space-y-3">
-        <h3 className="text-lg font-semibold">🔥 {t("exportedVideo")}</h3>
+      <Card title={`🔥 ${t("exportedVideo")}`} className="space-y-3">
         {exportedVideoUrl ? (
           <div className="space-y-3">
             <VideoPlayer src={exportedVideoUrl} language="vi" />
@@ -536,11 +654,182 @@ export default function VideoTaskDetail() {
             <p>{t("noExportedVideo")}</p>
           </div>
         )}
-      </div>
+      </Card>
+
+      {/* Previous Exports Section */}
+      {previousExports.length > 0 && (
+        <Card title="📁 Video đã xuất trước đây" className="space-y-4">
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">{t("filename")}</TableHead>
+                  <TableHead className="w-[20%]">{t("type")}</TableHead>
+                  <TableHead className="w-[12%]">{t("fileSize")}</TableHead>
+                  <TableHead className="w-[18%]">{t("createdDate")}</TableHead>
+                  <TableHead className="w-[10%] text-right">{t("actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {previousExports.map((video, index) => {
+                  const formatFileSize = (bytes: number) => {
+                    const mb = bytes / (1024 * 1024);
+                    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
+                  };
+
+                  const formatDate = (dateStr: string) => {
+                    return new Date(dateStr).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                  };
+
+                  const getTypeLabel = (type: string) => {
+                    const labels: Record<string, string> = {
+                      tts_sub_mix: "🎵+📝 TTS + Sub (Mixed)",
+                      tts_sub_mute: "🎵+📝 TTS + Sub (Muted)",
+                      tts_only: "🎵 TTS Only",
+                      subtitle_only: "📝 Subtitle Only",
+                      unknown: "❓ Unknown",
+                    };
+                    return labels[type] || labels["unknown"];
+                  };
+
+                  return (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">
+                        <div className="truncate cursor-help" title={video.filename} style={{ maxWidth: "250px" }}>
+                          {video.filename}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">{getTypeLabel(video.type)}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-mono">{formatFileSize(video.size)}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">{formatDate(video.created)}</div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <a href={video.path} target="_blank" rel="noopener">
+                            <Button size="sm" variant="outline" className="h-8 px-2">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </a>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2"
+                            onClick={() => {
+                              const timestamp = Date.now();
+                              setExportedVideoUrl(`${video.path}?t=${timestamp}`);
+                            }}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {previousExports.map((video, index) => {
+              const formatFileSize = (bytes: number) => {
+                const mb = bytes / (1024 * 1024);
+                return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
+              };
+
+              const formatDate = (dateStr: string) => {
+                return new Date(dateStr).toLocaleDateString("vi-VN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+              };
+
+              const getTypeLabel = (type: string) => {
+                const labels: Record<string, string> = {
+                  tts_sub_mix: "🎵+📝 TTS + Sub (Mixed)",
+                  tts_sub_mute: "🎵+📝 TTS + Sub (Muted)",
+                  tts_only: "🎵 TTS Only",
+                  subtitle_only: "📝 Subtitle Only",
+                  unknown: "❓ Unknown",
+                };
+                return labels[type] || labels["unknown"];
+              };
+
+              return (
+                <div key={index} className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                  <div className="space-y-3">
+                    {/* File Name */}
+                    <div className="font-medium text-sm truncate" title={video.filename}>
+                      {video.filename}
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div>
+                        <span className="font-medium">{t("type")}:</span> {getTypeLabel(video.type)}
+                      </div>
+                      <div>
+                        <span className="font-medium">{t("fileSize")}:</span>
+                        <span className="font-mono ml-1">{formatFileSize(video.size)}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="font-medium">{t("createdDate")}:</span> {formatDate(video.created)}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <a href={video.path} target="_blank" rel="noopener" className="flex-1">
+                        <Button size="sm" variant="outline" className="w-full">
+                          <Download className="h-4 w-4 mr-2" />
+                          {t("download")}
+                        </Button>
+                      </a>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          const timestamp = Date.now();
+                          setExportedVideoUrl(`${video.path}?t=${timestamp}`);
+                        }}
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        {t("preview")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Summary */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+            <HardDrive className="h-4 w-4" />
+            {t("totalExportedVideos", { count: previousExports.length })}
+          </div>
+        </Card>
+      )}
 
       {/* Video Upload Section */}
-      <div className="rounded-lg border p-5 bg-card space-y-3">
-        <h3 className="text-lg font-semibold">📤 {t("uploadNewVideo")}</h3>
+      <Card title={`📤 ${t("uploadNewVideo")}`} className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Input placeholder={t("videoUrl") || "Video URL"} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} />
           <Input placeholder={t("fileNameOptional") || "Filename (optional)"} value={filename} onChange={(e) => setFilename(e.target.value)} />
@@ -550,23 +839,29 @@ export default function VideoTaskDetail() {
         </div>
 
         <div className="mt-3">
-          <div className="flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              className="text-sm"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                console.log("📁 File selected:", file?.name);
-              }}
-            />
-            <Button onClick={handleFileUpload} disabled={loading}>
-              {loading ? t("processing") : t("addVideo")}
-            </Button>
-          </div>
+          <VideoUpload
+            disabled={loading}
+            onUpload={(video) => {
+              if (id && video.path) {
+                callApi(API_ROUTES.VIDEO_TASKS.VIDEOS(id as string), "POST", {
+                  storage_path: video.path,
+                  filename: video.originalName,
+                })
+                  .then(() => {
+                    load(); // Refresh data
+                    console.log("✅ Video added to task successfully");
+                  })
+                  .catch((error) => {
+                    console.error("❌ Error adding video to task:", error);
+                  });
+              }
+            }}
+            maxSize={100} // 100MB
+            showPreview={false} // Don't show preview since we have video list below
+            // Removed hard-coded text - now using translation system
+          />
         </div>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {videos.map((v) => {
@@ -575,7 +870,7 @@ export default function VideoTaskDetail() {
           const latestSubtitle = videoSubtitles[0]; // Most recent
 
           return (
-            <div key={v.id} className="rounded-lg border p-5 bg-card">
+            <Card key={v.id}>
               <div className="flex items-center justify-between mb-3">
                 <div className="font-medium text-sm break-words">{v.source_url || v.filename}</div>
                 {v.is_primary && <span className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground">{t("primary")}</span>}
@@ -588,22 +883,25 @@ export default function VideoTaskDetail() {
               <div className="mt-3 p-2 bg-muted/50 rounded text-xs">
                 {hasSubtitle ? (
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-green-600">
-                      ✅ <span>Subtitle available ({latestSubtitle.language_code})</span>
+                    <div className="flex items-center gap-2 text-success">
+                      ✅{" "}
+                      <span>
+                        {t("subtitleAvailable")} ({latestSubtitle.language_code})
+                      </span>
                     </div>
                     <div className="flex gap-1">
-                      <a href={latestSubtitle.url} target="_blank" rel="noopener" className="text-blue-600 hover:underline">
-                        📄 Download
+                      <a href={latestSubtitle.url} target="_blank" rel="noopener" className="text-primary hover:underline">
+                        📄 {t("download")}
                       </a>
                       {v.is_primary && (
-                        <button onClick={() => setSubtitleUrl(latestSubtitle.url)} className="text-blue-600 hover:underline ml-2">
-                          📺 Preview
+                        <button onClick={() => setSubtitleUrl(latestSubtitle.url)} className="text-primary hover:underline ml-2">
+                          📺 {t("preview")}
                         </button>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-muted-foreground">📝 No subtitle yet</div>
+                  <div className="text-muted-foreground">📝 {t("noSubtitleYet")}</div>
                 )}
               </div>
 
@@ -611,13 +909,9 @@ export default function VideoTaskDetail() {
 
               <div className="mt-3 flex gap-2">
                 {/* Generate Subtitle Button */}
-                <button
-                  className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/80 disabled:opacity-50"
-                  disabled={subtitleLoading}
-                  onClick={() => generateSubtitleForVideo(v.id)}
-                >
-                  {subtitleLoading ? "🔄" : "🎬"} {hasSubtitle ? "Regenerate" : "Generate"} Sub
-                </button>
+                <Button size="sm" variant="primary" disabled={subtitleLoading} onClick={() => generateSubtitleForVideo(v.id)}>
+                  {subtitleLoading ? "🔄" : "🎬"} {hasSubtitle ? t("regenerateSubtitle") : t("generateSubtitle")}
+                </Button>
 
                 <Button
                   variant="outline"
@@ -642,7 +936,7 @@ export default function VideoTaskDetail() {
                   {t("delete")}
                 </Button>
               </div>
-            </div>
+            </Card>
           );
         })}
         {!videos.length && <div className="text-sm text-muted-foreground">{t("noVideos")}</div>}

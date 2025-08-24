@@ -56,9 +56,9 @@ async function callOpenAITranscribe(urlOrPath: string): Promise<{ segments: Tran
     form.append("model", model);
     form.append("response_format", "verbose_json");
 
-    // Add timeout for fetch request (30 seconds)
+    // Add timeout for fetch request (2 minutes for larger files)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     const res = await fetch(`${apiBase}/audio/transcriptions`, {
       method: "POST",
@@ -147,7 +147,7 @@ async function callOpenAITranscribe(urlOrPath: string): Promise<{ segments: Tran
   } catch (error) {
     const duration = (Date.now() - transcribeStart) / 1000;
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`OpenAI transcription timeout after 30 seconds`);
+      throw new Error(`OpenAI transcription timeout after 2 minutes`);
     }
     console.error(`❌ OpenAI transcription failed after ${duration.toFixed(2)}s:`, error);
     throw error;
@@ -202,32 +202,13 @@ export async function callOpenAITextToSpeech(text: string, outputPath: string, o
   }
 }
 
+import { generateVttCss } from '@/lib/constants/subtitle-styles';
+
 // Generate karaoke-style VTT with word-level timing
 function toKaraokeVtt(segments: TranscriptSegment[]): string {
   const header = `WEBVTT
 
-STYLE
-::cue {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 24px;
-  text-align: center;
-  line-height: 1.2;
-  padding: 8px 12px;
-  border-radius: 6px;
-  opacity: 0.95;
-  border: 1px solid hsl(var(--border));
-}
-
-::cue(.highlight) {
-  color: hsl(var(--primary));
-  font-weight: bold;
-  text-shadow: 0 1px 2px hsl(var(--background));
-  background-color: hsl(var(--accent));
-}
-
-`;
+${generateVttCss()}`;
 
   const body = segments
     .map((seg, idx) => {
@@ -361,9 +342,9 @@ export const subtitleApp = {
             checkPath = path.join(UPLOAD_DIR, currentPath);
           }
           fileExists = fs.existsSync(checkPath);
-          console.log(`📂 Checking existing file: ${checkPath} - exists: ${fileExists ? 'YES' : 'NO'}`);
+          console.log(`📂 Checking existing file: ${checkPath} - exists: ${fileExists ? "YES" : "NO"}`);
         }
-        
+
         if (fileExists) {
           // Return existing if format matches AND file exists
           return {
@@ -407,18 +388,18 @@ export const subtitleApp = {
 
     // ❌ Only transcribe if no existing subtitle found
     console.log(`🎤 No existing subtitle found, transcribing...`);
-    
+
     // Fix path for public/uploads - normalize storage_path
     let source = "";
     if (primary.storage_path) {
-      const normalizedPath = primary.storage_path.startsWith("/uploads/") 
+      const normalizedPath = primary.storage_path.startsWith("/uploads/")
         ? primary.storage_path.substring(9) // Remove "/uploads/" prefix
         : primary.storage_path;
       source = path.join(UPLOAD_DIR, normalizedPath);
     } else {
       source = primary.source_url || "";
     }
-    
+
     console.log(`🎤 Transcribing from: ${source}`);
     const { segments, language } = await callOpenAITranscribe(source);
 
@@ -444,18 +425,18 @@ export const subtitleApp = {
       const filenameVtt = `task_${taskId}_vi.vtt`;
       const relPathVtt = `${relDir}/${filenameVtt}`;
       const absPathVtt = path.join(UPLOAD_DIR, relPathVtt);
-      
+
       console.log(`📁 Saving VTT file:`);
       console.log(`  - relDir: ${relDir}`);
       console.log(`  - filename: ${filenameVtt}`);
       console.log(`  - relPath: ${relPathVtt}`);
       console.log(`  - absPath: ${absPathVtt}`);
       console.log(`  - UPLOAD_DIR: ${UPLOAD_DIR}`);
-      
+
       // Ensure directory exists
       await ensureDir(path.dirname(absPathVtt));
       fs.writeFileSync(absPathVtt, vtt, "utf8");
-      
+
       // Verify file was actually written
       if (fs.existsSync(absPathVtt)) {
         console.log(`✅ VTT file successfully written to: ${absPathVtt}`);
@@ -510,7 +491,7 @@ export const subtitleApp = {
     // Fix path for public/uploads - normalize storage_path
     let source = "";
     if (video.storage_path) {
-      const normalizedPath = video.storage_path.startsWith("/uploads/") 
+      const normalizedPath = video.storage_path.startsWith("/uploads/")
         ? video.storage_path.substring(9) // Remove "/uploads/" prefix
         : video.storage_path;
       source = path.join(UPLOAD_DIR, normalizedPath);
@@ -638,19 +619,19 @@ export const subtitleApp = {
     } else {
       vttAbs = path.join(UPLOAD_DIR, vttPath);
     }
-    
+
     console.log(`📂 Reading subtitle from: ${vttAbs}`);
     console.log(`🔍 UPLOAD_DIR: ${UPLOAD_DIR}`);
     console.log(`🔍 vttPath: ${vttPath}`);
-    console.log(`🔍 Checking file exists: ${fs.existsSync(vttAbs) ? 'YES' : 'NO'}`);
-    
+    console.log(`🔍 Checking file exists: ${fs.existsSync(vttAbs) ? "YES" : "NO"}`);
+
     if (!fs.existsSync(vttAbs)) {
       // Try alternative paths
       const altPath1 = path.resolve(UPLOAD_DIR, vttPath.startsWith("/uploads/") ? vttPath.substring(9) : vttPath);
       const altPath2 = path.join("./uploads", vttPath.startsWith("/uploads/") ? vttPath.substring(9) : vttPath);
-      console.log(`🔍 Alt path 1: ${altPath1} - exists: ${fs.existsSync(altPath1) ? 'YES' : 'NO'}`);
-      console.log(`🔍 Alt path 2: ${altPath2} - exists: ${fs.existsSync(altPath2) ? 'YES' : 'NO'}`);
-      
+      console.log(`🔍 Alt path 1: ${altPath1} - exists: ${fs.existsSync(altPath1) ? "YES" : "NO"}`);
+      console.log(`🔍 Alt path 2: ${altPath2} - exists: ${fs.existsSync(altPath2) ? "YES" : "NO"}`);
+
       if (fs.existsSync(altPath1)) {
         vttAbs = altPath1;
       } else if (fs.existsSync(altPath2)) {
@@ -662,12 +643,12 @@ export const subtitleApp = {
         if (!result.vtt_path) {
           throw new Error("Failed to generate VTT subtitle for TTS after file not found");
         }
-        
+
         // Use the newly generated file path
         const newVttPath = result.vtt_path;
         const newNormalizedPath = newVttPath.startsWith("/uploads/") ? newVttPath.substring(9) : newVttPath;
         vttAbs = path.join(UPLOAD_DIR, newNormalizedPath);
-        
+
         console.log(`✅ Regenerated subtitle, using: ${vttAbs}`);
         if (!fs.existsSync(vttAbs)) {
           throw new Error(`Even after regeneration, subtitle file not found: ${vttAbs}`);
@@ -719,21 +700,19 @@ export const subtitleApp = {
     let shouldTranscribe = true;
 
     // Check if we have existing Vietnamese subtitle
-    const existingSubtitles = await baseRepo.findManyByFields<SubtitleTrack>(SubtitleTrack, { 
-      video_id: primary.id, 
-      language_code: "vi" 
+    const existingSubtitles = await baseRepo.findManyByFields<SubtitleTrack>(SubtitleTrack, {
+      video_id: primary.id,
+      language_code: "vi",
     });
 
     if (existingSubtitles.length > 0 && existingSubtitles[0].storage_path) {
       const existingPath = existingSubtitles[0].storage_path;
       console.log(`📝 Found existing Vietnamese subtitle: ${existingPath}`);
-      
+
       // Try to read existing VTT file
-      const normalizedExistingPath = existingPath.startsWith("/uploads/") 
-        ? existingPath.substring(9) 
-        : existingPath;
+      const normalizedExistingPath = existingPath.startsWith("/uploads/") ? existingPath.substring(9) : existingPath;
       const vttAbs = path.join(UPLOAD_DIR, normalizedExistingPath);
-      
+
       if (fs.existsSync(vttAbs)) {
         console.log(`♻️ Reusing existing subtitle segments for karaoke`);
         const vttContent = fs.readFileSync(vttAbs, "utf8");
@@ -748,11 +727,9 @@ export const subtitleApp = {
       const source = primary.storage_path;
       if (!source) throw new Error("No video source found");
 
-      const normalizedPath = source.startsWith("/uploads/") 
-        ? source.substring(9) 
-        : source;
+      const normalizedPath = source.startsWith("/uploads/") ? source.substring(9) : source;
       const fullPath = path.join(UPLOAD_DIR, normalizedPath);
-      
+
       const { segments: newSegments } = await callOpenAITranscribe(fullPath);
       segments = newSegments;
     }

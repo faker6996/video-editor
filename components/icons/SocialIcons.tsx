@@ -5,7 +5,7 @@ interface IconProps extends React.SVGProps<SVGSVGElement> {}
 export const GoogleIcon: React.FC<IconProps> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24" height="24" {...props}>
     <path
-      fill="#4285F4"
+      fill="hsl(var(--google-blue))"
       d="M24 9.5c3.54 0 6.04 1.53 7.43 2.81l5.49-5.49C33.03 3.33 28.94 1.5 24 1.5c-9.27 0-17.12 6.4-19.91 14.77l6.86 5.33C12.4 15.44 17.68 9.5 24 9.5z"
     />
     <path fill="#34A853" d="M46.5 24c0-1.53-.14-3.01-.39-4.43H24v8.4h12.7c-.54 2.89-2.18 5.34-4.59 7.02l7.19 5.59C44.1 36.7 46.5 31.0 46.5 24z" />

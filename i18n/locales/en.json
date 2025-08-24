@@ -151,6 +151,11 @@
     "lifetime": "Lifetime",
     "daysCount": "{days} days",
     "welcome": "Welcome",
+    "filename": "Filename",
+    "type": "Type",
+    "fileSize": "File Size",
+    "createdDate": "Created Date",
+    "actions": "Actions",
     "manageOcrTasks": "Manage your OCR tasks and track progress",
     "welcomeToOcrEditor": "Welcome to OCR Editor",
     "startByUploading": "Start by uploading an image to extract and edit text with AI assistance.",
@@ -253,7 +258,7 @@
     "videoWithSubtitle": "Video with {style} subtitle",
     "videoWithTTS": "Video with narration",
     "videoWithTTSAndSubtitle": "Video with narration + {style} subtitle",
-    "exportVideoWithOptions": "Export Video with Selected Options",
+    "exportVideoWithOptions": "Export Video",
     "exportingVideo": "Exporting video...",
     "generatingSubtitle": "Generating subtitle...",
     "generatingTTS": "Generating narration...",
@@ -279,6 +284,13 @@
     "active": "Active",
     "done": "Done",
     "of": "of",
+    "generateSubtitle": "Generate Subtitle",
+    "regenerateSubtitle": "Regenerate Subtitle",
+    "generating": "Generating...",
+    "subtitleAvailable": "Subtitle Available",
+    "noSubtitleYet": "No subtitle yet",
+    "download": "Download",
+    "preview": "Preview",
     "subscriptionCreated": "Subscription created successfully! Role cookie has been set.",
     "subscriptionFailed": "Subscription failed",
     "newFeatures": "New Features!",
@@ -319,7 +331,8 @@
     "exportQuality": "Export Quality",
     "exportQualityDesc": "Choose from 720p, 1080p, or 4K export options",
     "autoSave": "Auto Save",
-    "autoSaveDesc": "Your work is automatically saved every 30 seconds"
+    "autoSaveDesc": "Your work is automatically saved every 30 seconds",
+    "totalExportedVideos": "{count} exported videos"
   },
 
   "Form": {
@@ -478,5 +491,26 @@
     "page": "Page",
     "of": "of",
     "pageNavigation": "pagination navigation"
+  },
+
+  "VideoUpload": {
+    "dragDropText": "🎬 Drag & drop video files or click to browse",
+    "dragDropActiveText": "📁 Drop video files here",
+    "browseText": "Browse video files",
+    "supportedFormatsText": "Supported: MP4, MOV, AVI, MKV and common video formats",
+    "uploading": "Uploading...",
+    "uploadedVideos": "Uploaded Videos",
+    "fileSizeError": "File \"{fileName}\" is too large. Maximum size: {maxSize}MB",
+    "invalidFileTypeError": "File \"{fileName}\" is not a valid video",
+    "uploadSuccess": "\"{fileName}\" uploaded successfully",
+    "uploadFailed": "Upload failed",
+    "uploadError": "An error occurred during upload",
+    "duration": "Duration",
+    "dimensions": "Dimensions",
+    "fileSize": "File size",
+    "fileName": "File name",
+    "removeVideo": "Remove video",
+    "playVideo": "Play video",
+    "videoPreview": "Video preview"
   }
 }

@@ -7,12 +7,13 @@ import { createResponse } from "@/lib/utils/response";
 import { getUserFromRequest } from "@/lib/utils/auth-helper";
 import { videoTaskRepo } from "@/lib/modules/video_task/repositories/video_task_repo";
 import { subtitleApp } from "@/lib/modules/video_processing/applications/subtitle_app";
+import { generateAssStyle, generateSrtForceStyle } from "@/lib/constants/subtitle-styles";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 
-// Increase timeout for video export with subtitles
-export const maxDuration = 120; // 2 minutes for video processing
+// Increase timeout for video export with subtitles (transcription + processing)
+export const maxDuration = 240; // 4 minutes for transcription + video processing
 
 async function getHandler(req: NextRequest, { params }: any) {
   // We return 405 for GET to avoid heavy work; use POST to trigger export
@@ -34,6 +35,7 @@ async function postHandler(req: NextRequest, { params }: any) {
     muteOriginalAudio = false, // true = chỉ nghe TTS, false = mix TTS với tiếng gốc
     ttsVoice = "alloy", // OpenAI TTS voice: alloy, echo, fable, onyx, nova, shimmer
     ttsSpeed = 1.0, // TTS speed: 0.5-1.5
+    subtitleFont = "Arial", // Subtitle font family
   } = body;
 
   console.log(`🎬 Starting video export for task ${id} - TTS: ${includeTTS} (voice: ${ttsVoice}, speed: ${ttsSpeed}x), Subtitle: ${includeSubtitle} (${subtitleStyle}), Mute original: ${muteOriginalAudio}`);
@@ -152,7 +154,7 @@ ScriptType: v4.00+
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,24,&Hffffff,&Hffffff,&H80000000,&H80000000,1,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1
+${generateAssStyle(subtitleFont)}
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -197,7 +199,7 @@ ${assEvents}`;
         subtitleFilter = `ass='${relativeSrtPath}'`;
       } else {
         // SRT format with manual styling
-        subtitleFilter = `subtitles='${relativeSrtPath}':force_style='FontName=Arial,FontSize=24,PrimaryColour=&Hffffff,BackColour=&H80000000,BorderStyle=3,Outline=2'`;
+        subtitleFilter = `subtitles='${relativeSrtPath}':force_style='${generateSrtForceStyle(subtitleFont)}'`;
       }
       videoFilters.push(subtitleFilter);
     }

@@ -1,10 +1,10 @@
 .page {
-  --gray-rgb: 0, 0, 0;
-  --gray-alpha-200: rgba(var(--gray-rgb), 0.08);
-  --gray-alpha-100: rgba(var(--gray-rgb), 0.05);
+  --gray-rgb: hsl(var(--muted-foreground));
+  --gray-alpha-200: hsl(var(--border));
+  --gray-alpha-100: hsl(var(--muted));
 
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
+  --button-primary-hover: hsl(var(--primary) / 0.9);
+  --button-secondary-hover: hsl(var(--secondary) / 0.8);
 
   display: grid;
   grid-template-rows: 20px 1fr 20px;
@@ -18,12 +18,12 @@
 
 @media (prefers-color-scheme: dark) {
   .page {
-    --gray-rgb: 255, 255, 255;
-    --gray-alpha-200: rgba(var(--gray-rgb), 0.145);
-    --gray-alpha-100: rgba(var(--gray-rgb), 0.06);
+    --gray-rgb: hsl(var(--muted-foreground));
+    --gray-alpha-200: hsl(var(--border));
+    --gray-alpha-100: hsl(var(--muted));
 
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
+    --button-primary-hover: hsl(var(--primary) / 0.8);
+    --button-secondary-hover: hsl(var(--secondary) / 0.9);
   }
 }
 
@@ -68,10 +68,7 @@
   padding: 0 20px;
   border: none;
   border: 1px solid transparent;
-  transition:
-    background 0.2s,
-    color 0.2s,
-    border-color 0.2s;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
   cursor: pointer;
   display: flex;
   align-items: center;

@@ -25,8 +25,12 @@ export function toSrt(segments: TranscriptSegment[]): string {
     .join('\n');
 }
 
+import { generateVttCss } from '@/lib/constants/subtitle-styles';
+
 export function toVtt(segments: TranscriptSegment[]): string {
-  const header = 'WEBVTT\n\n';
+  const header = `WEBVTT
+
+${generateVttCss()}`;
   const body = segments
     .map((seg) => {
       const start = toTimecode(seg.start).replace(',', '.');
